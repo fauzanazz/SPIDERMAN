@@ -1,20 +1,15 @@
-[project]
+[tool.poetry]
 name = "backend"
 version = "0.1.0"
-description = ""
-authors = [
-    {name = "M Fauzan Azhim",email = "101320828+fauzanazz@users.noreply.github.com"}
-]
+description = "Backend service for SPIDERMAN project"
+authors = ["M Fauzan Azhim <101320828+fauzanazz@users.noreply.github.com>"]
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = [
-    "fastapi[standard] (>=0.115.13,<0.116.0)",
-    "celery (>=5.5.3,<6.0.0)",
-    "neo4j (>=5.28.1,<6.0.0)"
-]
 
-[tool.poetry]
-packages = [{include = "backend", from = "src"}]
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = {extras = ["standard"], version = "^0.115.13"}
+celery = "^5.5.3"
+neo4j = "^5.28.1"
 
 
 [build-system]

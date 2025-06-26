@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://user:password@db:5432/mydatabase
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - db
+      - rabbitmq
+  db:
+    image: "neo4j:2025"
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+  rabbitmq:
+    image: "rabbitmq:4.1.1-alpine"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
