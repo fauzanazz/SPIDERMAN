@@ -13,3 +13,8 @@ Poetry Command
 
 OpenAPI
 - localhost:8000/docs ( Default )
+
+Run test
+```
+poetry run pytest tests/ -v --cov=src --cov-report=html
+```
