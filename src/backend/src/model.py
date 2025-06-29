@@ -39,7 +39,7 @@ class CrawlResult(BaseModel):
     error_message: Optional[str] = None
     processing_time: Optional[float] = None
 
-# For crawl4ai extraction
+# For browser-use extraction
 class Product(BaseModel):
     name: str
     price: float

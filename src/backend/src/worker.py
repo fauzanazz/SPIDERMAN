@@ -4,7 +4,6 @@ import asyncio
 import logging
 import time
 from typing import Dict, Any
-from .config import crawl_config
 from .crawler import extract_gambling_financial_data
 from .database import db_handler
 from .model import CrawlResult
@@ -33,7 +32,6 @@ celery.conf.update(
 )
 
 def _process_single_site(url: str, task_id: str, update_callback=None) -> Dict[str, Any]:
-    """Core logic for processing a single gambling site - extracted for testing"""
     start_time = time.time()
     
     try:

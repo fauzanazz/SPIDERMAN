@@ -1,19 +1,18 @@
-from crawl4ai import AsyncWebCrawler, BM25ContentFilter, DefaultMarkdownGenerator
 import asyncio
 import re
+import json
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from .config import crawl_config, browser_config, llm_strategy, pattern_extraction_strategy
+from browser_use import Agent
+
+from .config import llm_config, extraction_instruction
 from .model import GamblingSiteData, SuspiciousAccount, CryptoWallet, PaymentMethod, AccountType
 
 logger = logging.getLogger(__name__)
 
 class IndonesianAccountExtractor:
     def __init__(self):
-        self.markdown_generator = DefaultMarkdownGenerator()
-        self.content_filter = BM25ContentFilter()
-        
         # Pola untuk bank Indonesia
         self.patterns = {
             'bank_account': r'\b\d{8,16}\b',  # Nomor rekening Indonesia 8-16 digit
@@ -38,50 +37,72 @@ class IndonesianAccountExtractor:
     
     async def extract_financial_data(self, url: str) -> GamblingSiteData:
         try:
-            async with AsyncWebCrawler(config=browser_config) as crawler:
-                result = await crawler.arun(
-                    url=url,
-                    config=crawl_config
-                )
-                
-                if not result.success:
-                    logger.error(f"Gagal crawl {url}: {result.error_message}")
-                    return self._create_error_result(url, result.error_message)
-                
-                gambling_data = await self._parse_llm_result(url, result)
-                await self._enhance_with_patterns(gambling_data, result.cleaned_html or result.markdown)
-                
-                logger.info(f"Berhasil ekstrak data dari {url}")
-                return gambling_data
+            task = f"Navigate to {url} and {extraction_instruction}"
+            
+            agent = Agent(
+                task=task,
+                llm=llm_config,
+            )
+            
+            # Run the agent
+            result = await agent.run()
+            
+            # Parse the result
+            gambling_data = await self._parse_agent_result(url, result)
+            
+            # Enhance with pattern matching if we have text content
+            if hasattr(result, 'text') and result.text:
+                await self._enhance_with_patterns(gambling_data, result.text)
+            elif hasattr(result, 'content') and result.content:
+                await self._enhance_with_patterns(gambling_data, str(result.content))
+            
+            logger.info(f"Berhasil ekstrak data dari {url}")
+            return gambling_data
                 
         except Exception as e:
             logger.error(f"Error ekstrak data dari {url}: {e}")
             return self._create_error_result(url, str(e))
     
-    async def _parse_llm_result(self, url: str, result) -> GamblingSiteData:
+    async def _parse_agent_result(self, url: str, result) -> GamblingSiteData:
         try:
-            if result.extracted_content:
+            # Try to extract JSON from the result
+            extracted_data = None
+            
+            # Check if result has structured data
+            if hasattr(result, 'extracted_content') and result.extracted_content:
                 extracted_data = result.extracted_content
-                
-                if isinstance(extracted_data, dict):
-                    return GamblingSiteData(
-                        site_url=url,
-                        site_name=extracted_data.get('site_name'),
-                        suspicious_accounts=[
-                            SuspiciousAccount(**acc) for acc in extracted_data.get('suspicious_accounts', [])
-                        ],
-                        crypto_wallets=[
-                            CryptoWallet(**wallet) for wallet in extracted_data.get('crypto_wallets', [])
-                        ],
-                        payment_methods=[
-                            PaymentMethod(**method) for method in extracted_data.get('payment_methods', [])
-                        ]
-                    )
+            elif hasattr(result, 'data') and result.data:
+                extracted_data = result.data
+            elif hasattr(result, 'content'):
+                # Try to find JSON in the content
+                content_str = str(result.content)
+                try:
+                    # Look for JSON pattern in the response
+                    json_match = re.search(r'\{.*\}', content_str, re.DOTALL)
+                    if json_match:
+                        extracted_data = json.loads(json_match.group())
+                except json.JSONDecodeError:
+                    pass
+            
+            if extracted_data and isinstance(extracted_data, dict):
+                return GamblingSiteData(
+                    site_url=url,
+                    site_name=extracted_data.get('site_name'),
+                    suspicious_accounts=[
+                        SuspiciousAccount(**acc) for acc in extracted_data.get('suspicious_accounts', [])
+                    ],
+                    crypto_wallets=[
+                        CryptoWallet(**wallet) for wallet in extracted_data.get('crypto_wallets', [])
+                    ],
+                    payment_methods=[
+                        PaymentMethod(**method) for method in extracted_data.get('payment_methods', [])
+                    ]
+                )
             
             return GamblingSiteData(site_url=url)
             
         except Exception as e:
-            logger.warning(f"Gagal parse hasil LLM untuk {url}: {e}")
+            logger.warning(f"Gagal parse hasil agent untuk {url}: {e}")
             return GamblingSiteData(site_url=url)
     
     async def _enhance_with_patterns(self, gambling_data: GamblingSiteData, content: str):
@@ -95,7 +116,7 @@ class IndonesianAccountExtractor:
         for account_num in bank_accounts:
             if len(account_num) >= 8:
                 # Cek apakah ada nama bank di sekitar nomor rekening
-                bank_name = self._find_bank_name(content_lower, account_num)
+                bank_name = self._find_bank_name(content_lower)
                 gambling_data.suspicious_accounts.append(
                     SuspiciousAccount(
                         account_number=account_num,
@@ -144,8 +165,7 @@ class IndonesianAccountExtractor:
                     )
                 )
     
-    def _find_bank_name(self, content: str, account_number: str) -> Optional[str]:
-        """Cari nama bank di sekitar nomor rekening"""
+    def _find_bank_name(self, content: str) -> Optional[str]:
         content_lower = content.lower()
         for bank in self.indonesian_banks:
             if bank.lower() in content_lower:
