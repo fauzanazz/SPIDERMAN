@@ -14,7 +14,7 @@ RUN touch README.md
 
 RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without dev --no-root
 
-FROM python:3.11-slim-buster AS runtime
+FROM python:3.11-slim-bookworm  AS runtime
 
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
@@ -24,5 +24,6 @@ COPY src/ /app/src/
 
 WORKDIR /app
 
-# Default command (can be overridden in docker-compose)
+RUN playwright install chromium --with-deps --no-shell
+
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
