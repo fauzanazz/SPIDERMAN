@@ -1,10 +1,9 @@
-import asyncio
 import re
 import json
 import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+from typing import Optional
 from browser_use import Agent
+import datetime
 
 from .config import llm_config, extraction_instruction
 from .model import GamblingSiteData, SuspiciousAccount, CryptoWallet, PaymentMethod, AccountType
@@ -46,6 +45,9 @@ class IndonesianAccountExtractor:
             
             # Run the agent
             result = await agent.run()
+
+            with open(f"log/{datetime.date.today}.json", 'w') as f:
+                f.write(result)
             
             # Parse the result
             gambling_data = await self._parse_agent_result(url, result)

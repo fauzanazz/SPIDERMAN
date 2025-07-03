@@ -1,16 +1,20 @@
 import os
 import random
-import string
 from datetime import datetime
-from browser_use.llm import ChatGoogle
+from browser_use.llm import ChatGoogle, ChatOpenAI
+from dotenv import load_dotenv
+load_dotenv()
 
 # Browser-use configuration
-llm_config = ChatGoogle(model="gemini-2.5-flash")
+if os.environ.get("GOOGLE_API_KEY"):
+  llm_config = ChatGoogle(model="gemini-2.5-flash")
+if os.environ.get("OPENAI_API_KEY"):
+   llm_config = ChatOpenAI(
+       model="gpt-4.1"
+   )
 
 # Random identity generators for registration
 def generate_random_identity():
-    """Generate random Indonesian identity for registration"""
-    
     # Common Indonesian first names
     first_names = [
         "Ahmad", "Budi", "Sari", "Dewi", "Andi", "Nina", "Rizki", "Maya", 
@@ -113,19 +117,12 @@ MISSION: Extract financial account information and payment methods from Indonesi
 === STEP 2: RECONNAISSANCE ===
 Before registering, explore the site to understand:
 - Registration requirements and validation rules
-- Available languages (prefer Indonesian/Bahasa)
-- Site structure and navigation
 - Security measures (CAPTCHA, email verification, etc.)
 - Deposit/withdrawal page locations
 
 === STEP 3: REGISTRATION STRATEGY ===
-Use the generated random identity to register. Common registration paths:
-a) Look for "Daftar", "Register", "Sign Up", "Gabung" buttons
-b) Try multiple registration approaches if first fails:
-   - Main registration form
-   - Mobile registration
-   - Social media registration (if available)
-   - Agent/referral registration
+Use the generated random identity to register.
+Look for "Daftar", "Register", "Sign Up", "Gabung" buttons
 
 Registration form filling strategy:
 - Fill all required fields with generated identity data
@@ -135,14 +132,10 @@ Registration form filling strategy:
 - Handle phone/email verification: Note requirements but continue exploration
 
 === STEP 4: ACCOUNT ACCESS ===
-After registration, attempt login and navigate to financial sections:
-- Member dashboard/profile
+After registration, attempt login and navigate to deposit sections:
 - Deposit/Top-up pages ("Deposit", "Isi Saldo", "Top Up")
-- Withdrawal pages ("Withdraw", "Tarik Dana", "Penarikan")
 - Payment methods ("Metode Pembayaran", "Cara Bayar")
 - Banking information pages
-- Promotions/bonuses (often show payment methods)
-- Help/FAQ sections about payments
 
 === STEP 5: FINANCIAL INFORMATION EXTRACTION ===
 
@@ -179,20 +172,12 @@ TARGET INFORMATION TO EXTRACT:
 Navigate through these specific areas:
 - Dashboard → Deposit → View all payment methods
 - Try to initiate a small deposit to see account details
-- Check withdrawal page for receiving account requirements
 - Look for "Bank Transfer" or "Transfer Bank" options
-- Search for customer service chat (often reveals payment accounts)
-- Check mobile app links or QR codes
-- Look for partner bank logos and click them
-- Check promotional materials for bonus payment methods
 
 TECHNICAL EXTRACTION METHODS:
 - Take screenshots of payment pages
 - Copy account numbers and bank details
 - Note any QR codes or payment links
-- Record minimum deposit amounts
-- Document processing fees and timeframes
-- Save any contact information for financial departments
 
 === STEP 7: VERIFICATION & VALIDATION ===
 - Cross-verify account numbers across multiple pages
@@ -264,7 +249,6 @@ Organize collected data in JSON format:
 
 === IMPORTANT BEHAVIORAL GUIDELINES ===
 - Act like a normal user, not a bot
-- Use random delays between actions (1-5 seconds)
 - Handle errors gracefully and try alternative approaches
 - If blocked, try different registration methods or wait and retry
 - Document any anti-bot measures encountered

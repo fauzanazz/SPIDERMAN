@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field, HttpUrl
 from typing import List, Optional, Dict, Any
-from .model import GamblingSiteData, CrawlResult
 
 # --- Request models ---
 class TaskRequest(BaseModel):
