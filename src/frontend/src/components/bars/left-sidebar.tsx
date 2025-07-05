@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import {
-  Search,
-  Filter,
-  FileText,
-  Monitor,
-  TrendingUp,
+  User,
+  CreditCard,
+  Phone,
+  MapPin,
+  Calendar,
   AlertTriangle,
-  Play,
-  RefreshCw,
+  Eye,
+  Download,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Card,
@@ -19,368 +21,401 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PriorityLevel, type Entity } from "@/lib/types/entity";
 
 interface LeftSidebarProps {
-  filters: any;
-  onFiltersChange: (filters: any) => void;
-  selectedEntity: any;
+  selectedEntity: Entity | null;
+  currentView: "network" | "geospatial";
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-const recentSearches = [
-  "BCA-7829****1234",
-  "OVO-081234****89",
-  "QRIS-MRC001234",
-  "+62812****5678",
-];
-
-const quickStats = [
-  { label: "High Risk Entities", value: "89", color: "text-red-600" },
-  { label: "Active Investigations", value: "23", color: "text-blue-600" },
-  { label: "Flagged Today", value: "12", color: "text-yellow-600" },
-  { label: "Reports Generated", value: "7", color: "text-green-600" },
-];
-
 export function LeftSidebar({
-  filters,
-  onFiltersChange,
   selectedEntity,
+  collapsed,
+  onToggleCollapse,
 }: LeftSidebarProps) {
-  const [activeTab, setActiveTab] = useState("search");
+  const [activeTab, setActiveTab] = useState("details");
+
+  const getEntityStatus = (priorityScore: number) => {
+    if (priorityScore >= 80) {
+      return PriorityLevel.HIGH;
+    }
+    if (priorityScore >= 70) {
+      return PriorityLevel.MEDIUM;
+    }
+    return PriorityLevel.LOW;
+  };
+
+  // Use mock data if no entity is selected
+  const entity = selectedEntity;
 
   return (
-    <div className="w-80 border-r bg-background/50 backdrop-blur">
-      <div className="h-full flex flex-col">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-          <div className="p-4 border-b">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="search" className="p-2">
-                <Search className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="filters" className="p-2">
-                <Filter className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="p-2">
-                <Monitor className="h-4 w-4" />
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="p-2">
-                <FileText className="h-4 w-4" />
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <ScrollArea className="flex-1">
-            <div className="p-4">
-              <TabsContent value="search" className="space-y-4 mt-0">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Entity Search</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="search">Search Entity</Label>
-                      <Input
-                        id="search"
-                        placeholder="Enter entity ID, phone, or account..."
-                        value={filters.searchQuery}
-                        onChange={(e) =>
-                          onFiltersChange({
-                            ...filters,
-                            searchQuery: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <Button className="w-full">
-                      <Search className="mr-2 h-4 w-4" />
-                      Search
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Recent Searches</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {recentSearches.map((search, index) => (
-                        <Button
-                          key={index}
-                          variant="ghost"
-                          className="w-full justify-start text-sm h-8"
-                          onClick={() =>
-                            onFiltersChange({ ...filters, searchQuery: search })
-                          }
-                        >
-                          {search}
-                        </Button>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Quick Stats</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {quickStats.map((stat, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between"
-                        >
-                          <span className="text-sm text-muted-foreground">
-                            {stat.label}
-                          </span>
-                          <span className={`text-sm font-medium ${stat.color}`}>
-                            {stat.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="filters" className="space-y-4 mt-0">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Analysis Filters</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="risk-level">Risk Level</Label>
-                      <Select
-                        value={filters.riskLevel}
-                        onValueChange={(value) =>
-                          onFiltersChange({ ...filters, riskLevel: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Levels</SelectItem>
-                          <SelectItem value="critical">Critical</SelectItem>
-                          <SelectItem value="high">High Risk</SelectItem>
-                          <SelectItem value="medium">Medium Risk</SelectItem>
-                          <SelectItem value="low">Low Risk</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="entity-type">Entity Type</Label>
-                      <Select
-                        value={filters.entityType}
-                        onValueChange={(value) =>
-                          onFiltersChange({ ...filters, entityType: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Types</SelectItem>
-                          <SelectItem value="bank">Bank Account</SelectItem>
-                          <SelectItem value="ewallet">E-Wallet</SelectItem>
-                          <SelectItem value="qris">QRIS Code</SelectItem>
-                          <SelectItem value="phone">Phone Number</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="time-range">Time Range</Label>
-                      <Select
-                        value={filters.timeRange}
-                        onValueChange={(value) =>
-                          onFiltersChange({ ...filters, timeRange: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="7d">Last 7 days</SelectItem>
-                          <SelectItem value="30d">Last 30 days</SelectItem>
-                          <SelectItem value="90d">Last 90 days</SelectItem>
-                          <SelectItem value="1y">Last year</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <Separator />
-
-                    <div className="flex gap-2">
-                      <Button className="flex-1">
-                        <Filter className="mr-2 h-4 w-4" />
-                        Apply
-                      </Button>
-                      <Button variant="outline" className="flex-1">
-                        Reset
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Display Options</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Show Labels</span>
-                      <Button variant="outline" size="sm">
-                        Toggle
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Cluster Nodes</span>
-                      <Button variant="outline" size="sm">
-                        Toggle
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Animation</span>
-                      <Button variant="outline" size="sm">
-                        Toggle
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="tasks" className="space-y-4 mt-0">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Active Tasks</CardTitle>
-                    <CardDescription className="text-xs">
-                      OSINT crawling operations
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <p className="text-sm font-medium">BCA Crawl</p>
-                        <p className="text-xs text-muted-foreground">
-                          65% complete
+    <div
+      className={`absolute left-4 top-4 bottom-4 z-20 transition-all duration-300 ${collapsed ? "w-12" : "w-96"}`}
+    >
+      <div className="h-full flex">
+        <div
+          className={`bg-black/95 border border-gray-700 backdrop-blur rounded-lg flex flex-col transition-all duration-300 ${collapsed ? "w-0 overflow-auto opacity-0" : "w-full opacity-100"}`}
+        >
+          {!collapsed && (
+            <div className="h-full">
+              {entity ? (
+                <>
+                  <div className="p-4 border-b border-gray-700">
+                    <div className="flex items-center gap-3 mb-3 text-start">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-800 text-white">
+                        <CreditCard className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate text-white font-mono">
+                          {entity.id}
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                          {entity.type.toUpperCase()}
+                          {entity.type !== "qris" &&
+                            ` - ${entity.specificInformation}`}
                         </p>
                       </div>
-                      <Badge variant="secondary">Running</Badge>
                     </div>
-                    <div className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <p className="text-sm font-medium">OVO Analysis</p>
-                        <p className="text-xs text-muted-foreground">
-                          80% complete
-                        </p>
+
+                    <div className="flex items-center gap-2 mb-3">
+                      <Badge
+                        variant="destructive"
+                        className="text-xs bg-red-600 text-white"
+                      >
+                        Priority: {entity.priorityScore}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-gray-600 text-gray-400"
+                      >
+                        {getEntityStatus(entity.priorityScore)}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Jumlah Koneksi:</span>
+                        <span className="font-medium text-white">
+                          {entity.connections}
+                        </span>
                       </div>
-                      <Badge variant="secondary">Running</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <p className="text-sm font-medium">DANA Scan</p>
-                        <p className="text-xs text-muted-foreground">Failed</p>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">
+                          Aktivitas Terakhir:
+                        </span>
+                        <span className="font-medium text-white">
+                          {entity.lastActivity}
+                        </span>
                       </div>
-                      <Badge variant="destructive">Error</Badge>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Task Controls</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button className="w-full" size="sm">
-                      <Play className="mr-2 h-4 w-4" />
-                      New Task
-                    </Button>
-                    <Button variant="outline" className="w-full" size="sm">
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Refresh All
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  {/* Tabs */}
+                  <Tabs
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    className="flex-1"
+                  >
+                    <div className="px-4 pt-4">
+                      <TabsList className="grid w-full grid-cols-3 bg-gray-900 border-gray-700">
+                        <TabsTrigger
+                          value="details"
+                          className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
+                        >
+                          Details
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="network"
+                          className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
+                        >
+                          Network
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="activity"
+                          className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
+                        >
+                          Activity
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
 
-              <TabsContent value="reports" className="space-y-4 mt-0">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Quick Reports</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      size="sm"
-                    >
-                      <TrendingUp className="mr-2 h-4 w-4" />
-                      Risk Analysis
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      size="sm"
-                    >
-                      <AlertTriangle className="mr-2 h-4 w-4" />
-                      Alert Summary
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      size="sm"
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Entity Report
-                    </Button>
-                  </CardContent>
-                </Card>
+                    <ScrollArea className="flex-1">
+                      <div className="p-4">
+                        <TabsContent
+                          value="details"
+                          className="space-y-4 mt-0 text-start"
+                        >
+                          <Card className="bg-gray-900/50 border-gray-700 gap-0">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm text-gray-400">
+                                Informasi Entitas
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-gray-400" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-white">
+                                    {entity.accountHolder}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    Pemegang Akun
+                                  </p>
+                                </div>
+                              </div>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Laporan Terbaru</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="text-sm">
-                      <p className="font-medium">Daily Risk Summary</p>
-                      <p className="text-xs text-muted-foreground">
-                        Generated 2h ago
-                      </p>
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-gray-400" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-white font-mono">
+                                    {entity.phoneNumber}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    Nomor Telepon
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-gray-400" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-white">
+                                    {entity.location}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    Lokasi
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-gray-400" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-white">
+                                    {entity.createdAt}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    Dibuat
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          <Card className="bg-gray-900/50 border-gray-700">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm text-gray-400">
+                                Priority Assessment
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-400">
+                                    Overall Priority
+                                  </span>
+                                  <span className="text-sm font-medium text-white">
+                                    {entity.priorityScore}/100
+                                  </span>
+                                </div>
+                                <Progress
+                                  value={entity.priorityScore}
+                                  className="h-2 bg-gray-800"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                                <span className="text-sm text-red-500">
+                                  High-priority patterns detected
+                                </span>
+                              </div>
+
+                              <Separator className="bg-gray-700" />
+
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">
+                                    Transactions:
+                                  </span>
+                                  <span className="font-medium text-white">
+                                    {entity.transactions}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">
+                                    Total Amount:
+                                  </span>
+                                  <span className="font-medium text-white">
+                                    {entity.totalAmount}
+                                  </span>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          <div className="flex gap-2">
+                            <Button
+                              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
+                              size="sm"
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Full Profile
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-gray-600 text-gray-400 hover:bg-gray-800 bg-transparent"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="network" className="space-y-4 mt-0">
+                          <Card className="bg-gray-900/50 border-gray-700">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm text-gray-400">
+                                Entitas Terkait
+                              </CardTitle>
+                              <CardDescription className="text-xs text-gray-500">
+                                Entities yang bertranksi dengan akun ini
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                {entity.linkedEntities.map(
+                                  (linkedEntity, index) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-center justify-between p-2 border border-gray-700 rounded bg-gray-800/30"
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate text-white font-mono">
+                                          {linkedEntity.id}
+                                        </p>
+                                        <p className="text-xs text-gray-400">
+                                          {linkedEntity.accountHolder} -{" "}
+                                          {linkedEntity.type}
+                                        </p>
+                                      </div>
+                                      <Badge
+                                        variant={
+                                          linkedEntity.priorityScore >= 80
+                                            ? "destructive"
+                                            : linkedEntity.priorityScore >= 60
+                                              ? "secondary"
+                                              : "outline"
+                                        }
+                                        className="text-xs"
+                                      >
+                                        {linkedEntity.priorityScore}
+                                      </Badge>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+
+                        <TabsContent
+                          value="activity"
+                          className="space-y-4 mt-0"
+                        >
+                          <Card className="bg-gray-900/50 border-gray-700">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm text-gray-400">
+                                Recent Activity
+                              </CardTitle>
+                              <CardDescription className="text-xs text-gray-500">
+                                Latest events and transactions
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                {entity.recentActivity.map(
+                                  (activity, index) => (
+                                    <div key={index} className="flex gap-3">
+                                      <div
+                                        className={`w-2 h-2 rounded-full mt-2 ${
+                                          activity.severity === "High Priority"
+                                            ? "bg-red-500"
+                                            : activity.severity ===
+                                                "Medium Priority"
+                                              ? "bg-yellow-500"
+                                              : "bg-green-500"
+                                        }`}
+                                      />
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <p className="text-sm font-medium text-white">
+                                            {activity.event}
+                                          </p>
+                                          <span className="text-xs text-gray-400">
+                                            {activity.time}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+                      </div>
+                    </ScrollArea>
+                  </Tabs>
+                </>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                  <div className="mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center">
+                      <CreditCard className="h-8 w-8 text-gray-500" />
                     </div>
-                    <div className="text-sm">
-                      <p className="font-medium">Network Analysis</p>
-                      <p className="text-xs text-muted-foreground">
-                        Generated 4h ago
-                      </p>
-                    </div>
-                    <div className="text-sm">
-                      <p className="font-medium">Entity Investigation</p>
-                      <p className="text-xs text-muted-foreground">
-                        Generated 6h ago
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                    <h3 className="text-lg font-medium text-white mb-2">
+                      Belum ada entitas yang dipilih
+                    </h3>
+                    <p className="text-sm text-gray-400 max-w-xs">
+                      Klik pada node di grafik jaringan untuk melihat detail
+                      entitas.
+                    </p>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Pilih entitas untuk melihat:
+                    <ul className="mt-2 space-y-1 text-left">
+                      <li>• Detail dan informasi entitas</li>
+                      <li>• Entitas terkait dan hubungan</li>
+                      <li>• Aktivitas terbaru dan transaksi</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
-          </ScrollArea>
-        </Tabs>
+          )}
+        </div>
+
+        {/* Toggle Button */}
+        <Button
+          onClick={onToggleCollapse}
+          variant="ghost"
+          size="sm"
+          className="ml-2 h-12 w-8 bg-black/90 border border-gray-700 text-gray-400 hover:text-white hover:bg-gray-800 backdrop-blur rounded-lg"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </Button>
       </div>
     </div>
   );

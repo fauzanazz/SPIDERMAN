@@ -23,23 +23,21 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
   const { setTheme, theme } = useTheme();
 
   return (
-    <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="h-16 border-b border-gray-800 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/90">
       <div className="flex h-full items-center justify-between px-6">
         {/* Logo and Title */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 text-white">
               <Shield className="h-4 w-4" />
             </div>
             <div>
-              <h1 className="font-bold text-lg">SPIDERMAN</h1>
-              <p className="text-xs text-muted-foreground">
-                Intelligence Dashboard
-              </p>
+              <h1 className="font-bold text-lg text-white">SPIDERMAN</h1>
+              <p className="text-xs text-gray-400">Intelligence Dashboard</p>
             </div>
           </div>
 
-          <div className="h-6 w-px bg-border" />
+          <div className="h-6 w-px bg-gray-700" />
 
           {/* View Toggle */}
           <Tabs
@@ -48,14 +46,17 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
               onViewChange(value as "network" | "geospatial")
             }
           >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="network" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-900 border-gray-700">
+              <TabsTrigger
+                value="network"
+                className="flex items-center gap-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
+              >
                 <Network className="h-4 w-4" />
                 Network Graph
               </TabsTrigger>
               <TabsTrigger
                 value="geospatial"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
               >
                 <Map className="h-4 w-4" />
                 Geospatial Map
@@ -68,20 +69,27 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
         <div className="flex items-center gap-4">
           {/* System Status */}
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm text-muted-foreground">System Active</span>
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-sm text-gray-300">System Active</span>
           </div>
 
           {/* Active Tasks Badge */}
-          <Badge variant="secondary" className="gap-1">
-            <span className="w-2 h-2 bg-blue-500 rounded-full" />3 Active Tasks
+          <Badge
+            variant="secondary"
+            className="gap-1 bg-gray-800 text-gray-300 border-gray-700"
+          >
+            <span className="w-2 h-2 bg-red-500 rounded-full" />3 Active Tasks
           </Badge>
 
-          <div className="h-6 w-px bg-border" />
+          <div className="h-6 w-px bg-gray-700" />
 
           {/* User Controls */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-gray-400 hover:text-white hover:bg-gray-800"
+            >
               <Bell className="h-4 w-4" />
               <span className="sr-only">Notifications</span>
             </Button>
@@ -90,6 +98,7 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
               variant="ghost"
               size="icon"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="text-gray-400 hover:text-white hover:bg-gray-800"
             >
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -98,18 +107,33 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full text-gray-400 hover:text-white hover:bg-gray-800"
+                >
                   <User className="h-4 w-4" />
                   <span className="sr-only">User menu</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Financial Analyst</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-                <DropdownMenuItem>System Preferences</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+              <DropdownMenuContent
+                align="end"
+                className="bg-gray-900 border-gray-700"
+              >
+                <DropdownMenuLabel className="text-gray-300">
+                  Financial Analyst
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-gray-700" />
+                <DropdownMenuItem className="text-gray-300 hover:bg-gray-800">
+                  Profile Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-gray-300 hover:bg-gray-800">
+                  System Preferences
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-gray-700" />
+                <DropdownMenuItem className="text-gray-300 hover:bg-gray-800">
+                  Logout
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

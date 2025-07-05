@@ -19,7 +19,7 @@ type Location = {
   lat: number;
   lng: number;
   count: number; // Number of entities in this location
-  riskLevel: "high" | "medium" | "low";
+  priorityLevel: "high" | "medium" | "low";
 };
 const mockLocations = [
   {
@@ -28,7 +28,7 @@ const mockLocations = [
     lat: -6.2615,
     lng: 106.8106,
     count: 45,
-    riskLevel: "high",
+    priorityLevel: "high",
   },
   {
     id: 2,
@@ -36,7 +36,7 @@ const mockLocations = [
     lat: -6.1944,
     lng: 106.8229,
     count: 32,
-    riskLevel: "medium",
+    priorityLevel: "medium",
   },
   {
     id: 3,
@@ -44,7 +44,7 @@ const mockLocations = [
     lat: -6.9175,
     lng: 107.6191,
     count: 28,
-    riskLevel: "high",
+    priorityLevel: "high",
   },
   {
     id: 4,
@@ -52,7 +52,7 @@ const mockLocations = [
     lat: -7.2575,
     lng: 112.7521,
     count: 23,
-    riskLevel: "medium",
+    priorityLevel: "medium",
   },
   {
     id: 5,
@@ -60,7 +60,7 @@ const mockLocations = [
     lat: 3.5952,
     lng: 98.6722,
     count: 19,
-    riskLevel: "low",
+    priorityLevel: "low",
   },
   {
     id: 6,
@@ -68,7 +68,7 @@ const mockLocations = [
     lat: -6.9667,
     lng: 110.4167,
     count: 15,
-    riskLevel: "low",
+    priorityLevel: "low",
   },
 ] as Location[];
 
@@ -78,8 +78,8 @@ export function GeospatialMapView() {
     null
   );
 
-  const getLocationColor = (riskLevel: string) => {
-    switch (riskLevel) {
+  const getLocationColor = (priorityLevel: string) => {
+    switch (priorityLevel) {
       case "high":
         return "#ef4444";
       case "medium":
@@ -139,9 +139,14 @@ export function GeospatialMapView() {
               </span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">High Risk Areas:</span>
+              <span className="text-muted-foreground">
+                High Priority Areas:
+              </span>
               <span className="font-medium text-red-600">
-                {mockLocations.filter((loc) => loc.riskLevel === "high").length}
+                {
+                  mockLocations.filter((loc) => loc.priorityLevel === "high")
+                    .length
+                }
               </span>
             </div>
           </div>
@@ -174,7 +179,7 @@ export function GeospatialMapView() {
                       cx={x}
                       cy={y}
                       r={getLocationSize(location.count)}
-                      fill={getLocationColor(location.riskLevel)}
+                      fill={getLocationColor(location.priorityLevel)}
                       fillOpacity={0.3}
                       className="animate-pulse"
                     />
@@ -184,7 +189,7 @@ export function GeospatialMapView() {
                     cx={x}
                     cy={y}
                     r={8}
-                    fill={getLocationColor(location.riskLevel)}
+                    fill={getLocationColor(location.priorityLevel)}
                     stroke="#ffffff"
                     strokeWidth="2"
                     className="cursor-pointer transition-all duration-200 hover:r-10"
@@ -234,18 +239,18 @@ export function GeospatialMapView() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Risk Level:
+                      Priority Level:
                     </span>
                     <Badge
                       variant={
-                        selectedLocation.riskLevel === "high"
+                        selectedLocation.priorityLevel === "high"
                           ? "destructive"
-                          : selectedLocation.riskLevel === "medium"
+                          : selectedLocation.priorityLevel === "medium"
                             ? "secondary"
                             : "outline"
                       }
                     >
-                      {selectedLocation.riskLevel}
+                      {selectedLocation.priorityLevel}
                     </Badge>
                   </div>
                   <div className="flex justify-between">
@@ -271,18 +276,18 @@ export function GeospatialMapView() {
       <div className="absolute bottom-4 left-4 z-10">
         <Card className="p-3">
           <div className="text-sm space-y-2">
-            <div className="font-medium mb-2">Risk Areas</div>
+            <div className="font-medium mb-2">Priority Areas</div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-xs">High Risk</span>
+              <span className="text-xs">High Priority</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <span className="text-xs">Medium Risk</span>
+              <span className="text-xs">Medium Priority</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-xs">Low Risk</span>
+              <span className="text-xs">Low Priority</span>
             </div>
           </div>
         </Card>

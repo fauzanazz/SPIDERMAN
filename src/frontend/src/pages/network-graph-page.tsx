@@ -34,7 +34,7 @@ export function NetworkGraphPage() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="risk-level">Risk Level</Label>
+              <Label htmlFor="priority-level">Priority Level</Label>
               <Select>
                 <SelectTrigger>
                   <SelectValue placeholder="All levels" />
@@ -42,9 +42,9 @@ export function NetworkGraphPage() {
                 <SelectContent>
                   <SelectItem value="all">All Levels</SelectItem>
                   <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High Risk</SelectItem>
-                  <SelectItem value="medium">Medium Risk</SelectItem>
-                  <SelectItem value="low">Low Risk</SelectItem>
+                  <SelectItem value="high">High Priority</SelectItem>
+                  <SelectItem value="medium">Medium Priority</SelectItem>
+                  <SelectItem value="low">Low Priority</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -150,7 +150,7 @@ export function NetworkGraphPage() {
                 <p className="text-sm text-muted-foreground">Bank Account</p>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Risk Score</span>
+                <span className="text-sm">Priority Score</span>
                 <Badge variant="destructive">85</Badge>
               </div>
               <div className="flex items-center justify-between">
@@ -186,7 +186,9 @@ export function NetworkGraphPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">23</div>
-            <p className="text-sm text-muted-foreground">High-Risk Clusters</p>
+            <p className="text-sm text-muted-foreground">
+              High-Priority Clusters
+            </p>
           </CardContent>
         </Card>
         <Card>
