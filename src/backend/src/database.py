@@ -1,7 +1,7 @@
 from neo4j import GraphDatabase
 import os
 import logging
-from typing import List, Optional
+from typing import List
 from datetime import datetime
 from .model import GamblingSiteData, SuspiciousAccount, CryptoWallet, PaymentMethod
 
