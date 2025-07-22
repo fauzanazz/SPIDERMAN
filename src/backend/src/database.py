@@ -3,8 +3,8 @@ import os
 import logging
 from typing import List
 from datetime import datetime
-from .model import GamblingSiteData, SuspiciousAccount, CryptoWallet, PaymentMethod
-
+from urllib.parse import urlparse
+from .model import BankAccount, CryptoWallet, GamblingSiteData
 logger = logging.getLogger(__name__)
 
 class Neo4jHandler:
@@ -58,6 +58,23 @@ class Neo4jHandler:
             self.connected = False
             return False
     
+    def _extract_domain(self, url: str) -> str:
+        """Extract domain from URL, removing path and keeping only scheme + netloc"""
+        try:
+            parsed = urlparse(url)
+            if parsed.netloc:
+                # Return scheme + netloc (e.g., https://example.com)
+                domain = f"{parsed.scheme}://{parsed.netloc}"
+                logger.debug(f"🌐 [DOMAIN-EXTRACT] {url} -> {domain}")
+                return domain
+            else:
+                # If parsing fails, return original URL
+                logger.warning(f"⚠️ [DOMAIN-EXTRACT] Could not parse URL: {url}")
+                return url
+        except Exception as e:
+            logger.error(f"❌ [DOMAIN-EXTRACT] Error parsing URL {url}: {e}")
+            return url
+    
     def create_indexes(self):
         if not self._check_connection():
             logger.warning("Skipping index creation - database not connected")
@@ -81,41 +98,82 @@ class Neo4jHandler:
     
     def store_gambling_site_data(self, data: GamblingSiteData) -> bool:
         if not self._check_connection():
-            logger.error("Cannot store data - database not connected")
+            logger.error("❌ [DB-ERROR] Cannot store data - database not connected")
             return False
+        
+        # Extract domain from the full URL to avoid duplicates with different paths
+        site_domain = self._extract_domain(data.site_info.site_url)
+        
+        logger.info(f"🔄 [DB-START] Mulai menyimpan data untuk situs: {data.site_info.site_url}")
+        logger.info(f"🌐 [DB-DOMAIN] Domain yang akan disimpan: {site_domain}")
+        logger.info(f"📊 [DB-INFO] Data counts - Accounts: {len(data.bank_accounts)}, Wallets: {len(data.crypto_wallets)}, Payments: {len(data.payment_gateways)}")
+    
             
         try:
             with self.driver.session() as session:
+                logger.debug(f"💾 [DB-SAVE] Menyimpan node SitusJudi untuk: {site_domain}")
+            
                 site_query = """
                 MERGE (g:SitusJudi {url: $url})
                 SET g.nama = $nama,
-                    g.waktu_ekstraksi = $waktu
+                    g.waktu_ekstraksi = $waktu,
+                    g.original_url = $original_url
                 RETURN g
                 """
                 
                 session.run(site_query, {
-                    "url": data.site_url,
-                    "nama": data.site_name,
-                    "waktu": data.extraction_timestamp.isoformat()
+                    "url": site_domain,
+                    "nama": data.site_info.site_name,
+                    "waktu": datetime.now().isoformat(),
+                    "original_url": data.site_info.site_url
                 })
+                logger.debug(f"✅ [DB-SUCCESS] Node SitusJudi berhasil disimpan: {site_domain}")
+
+                # Process suspicious accounts with detailed logging
+                logger.debug(f"🔄 [DB-ACCOUNTS] Memproses {len(data.bank_accounts)} akun mencurigakan...")
+                for i, account in enumerate(data.bank_accounts, 1):
+                    try:
+                        self._store_suspicious_account(session, site_domain, account)
+                        logger.debug(f"✅ [DB-ACCOUNT] {i}/{len(data.bank_accounts)} - {account.account_number} ({account.bank_name})")
+                    except Exception as e:
+                        logger.error(f"❌ [DB-ACCOUNT-FAILED] {i}/{len(data.bank_accounts)} - {account.account_number}: {str(e)}")
+                        raise
                 
-                for account in data.suspicious_accounts:
-                    self._store_suspicious_account(session, data.site_url, account)
+                # Process crypto wallets with detailed logging
+                logger.debug(f"🔄 [DB-WALLETS] Memproses {len(data.crypto_wallets)} crypto wallet...")
+                for i, wallet in enumerate(data.crypto_wallets, 1):
+                    try:
+                        self._store_crypto_wallet(session, site_domain, wallet)
+                        logger.debug(f"✅ [DB-WALLET] {i}/{len(data.crypto_wallets)} - {wallet.wallet_address} ({wallet.cryptocurrency})")
+                    except Exception as e:
+                        logger.error(f"❌ [DB-WALLET-FAILED] {i}/{len(data.crypto_wallets)} - {wallet.wallet_address}: {str(e)}")
+                        raise
                 
-                for wallet in data.crypto_wallets:
-                    self._store_crypto_wallet(session, data.site_url, wallet)
+                # Process payment methods with detailed logging
+                logger.debug(f"🔄 [DB-PAYMENTS] Memproses {len(data.payment_gateways)} metode pembayaran...")
+                for i, payment in enumerate(data.payment_gateways, 1):
+                    try:
+                        # self._store_payment_method(session, site_domain, payment)
+                        logger.debug(f"✅ [DB-PAYMENT] {i}/{len(data.payment_gateways)} - {payment.gateway_name}")
+                    except Exception as e:
+                        logger.error(f"❌ [DB-PAYMENT-FAILED] {i}/{len(data.payment_gateways)} - {payment.gateway_name}: {str(e)}")
+                        # raise
                 
-                for payment in data.payment_methods:
-                    self._store_payment_method(session, data.site_url, payment)
-                
-                logger.info(f"Berhasil simpan data untuk situs: {data.site_url}")
+                logger.info(f"🎉 [DB-COMPLETE] BERHASIL simpan semua data untuk situs: {site_domain}")
+                logger.info(f"📈 [DB-SUMMARY] Tersimpan - Accounts: {len(data.bank_accounts)}, Wallets: {len(data.crypto_wallets)}, Payments: {len(data.payment_gateways)}")
                 return True
                 
         except Exception as e:
-            logger.error(f"Gagal simpan data situs judi: {e}")
+            logger.error(f"💥 [DB-CRITICAL-ERROR] GAGAL simpan data situs: {site_domain}")
+            logger.error(f"🚨 [DB-ERROR-DETAIL] Error: {str(e)}")
+            logger.error(f"🔍 [DB-ERROR-TYPE] Type: {type(e).__name__}")
+            import traceback
+            logger.error(f"📍 [DB-TRACEBACK] {traceback.format_exc()}")
             return False
     
-    def _store_suspicious_account(self, session, site_url: str, account: SuspiciousAccount):
+    def _store_suspicious_account(self, session, site_url: str, account: BankAccount):
+        logger.debug(f"🏦 [DB-ACCOUNT-DETAIL] Storing account: {account.account_number} ({account.bank_name}) for site: {site_url}")
+        
         account_query = """
         MATCH (g:SitusJudi {url: $site_url})
         MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
@@ -126,16 +184,22 @@ class Neo4jHandler:
         MERGE (g)-[:MENGGUNAKAN_REKENING]->(a)
         """
         
-        session.run(account_query, {
-            "site_url": site_url,
-            "nomor_rekening": account.account_number,
-            "jenis_akun": account.account_type.value,
-            "nama_bank": account.bank_name,
-            "pemilik_rekening": account.account_holder,
-            "waktu": datetime.now().isoformat()
-        })
+        try:
+            session.run(account_query, {
+                "site_url": site_url,
+                "nomor_rekening": account.account_number,
+                "jenis_akun": account.account_type.value,
+                "nama_bank": account.bank_name,
+                "pemilik_rekening": account.account_holder,
+                "waktu": datetime.now().isoformat()
+            })
+        except Exception as e:
+            logger.error(f"🚨 [DB-ACCOUNT-QUERY-FAILED] Neo4j query failed for account {account.account_number}: {str(e)}")
+            raise
     
     def _store_crypto_wallet(self, session, site_url: str, wallet: CryptoWallet):
+        logger.debug(f"💰 [DB-WALLET-DETAIL] Storing wallet: {wallet.wallet_address} ({wallet.cryptocurrency}) for site: {site_url}")
+        
         wallet_query = """
         MATCH (g:SitusJudi {url: $site_url})
         MERGE (c:CryptoWallet {alamat_wallet: $alamat_wallet})
@@ -144,30 +208,18 @@ class Neo4jHandler:
         MERGE (g)-[:MENGGUNAKAN_CRYPTO]->(c)
         """
         
-        session.run(wallet_query, {
-            "site_url": site_url,
-            "alamat_wallet": wallet.wallet_address,
-            "cryptocurrency": wallet.cryptocurrency,
-            "waktu": datetime.now().isoformat()
-        })
+        try:
+            session.run(wallet_query, {
+                "site_url": site_url,
+                "alamat_wallet": wallet.wallet_address,
+                "cryptocurrency": wallet.cryptocurrency,
+                "waktu": datetime.now().isoformat()
+            })
+        except Exception as e:
+            logger.error(f"🚨 [DB-WALLET-QUERY-FAILED] Neo4j query failed for wallet {wallet.wallet_address}: {str(e)}")
+            raise
     
-    def _store_payment_method(self, session, site_url: str, payment: PaymentMethod):
-        payment_query = """
-        MATCH (g:SitusJudi {url: $site_url})
-        MERGE (p:MetodePembayaran {provider: $provider, jenis: $jenis})
-        SET p.info_akun = $info_akun,
-            p.terakhir_update = $waktu
-        MERGE (g)-[:MENERIMA_PEMBAYARAN]->(p)
-        """
-        
-        session.run(payment_query, {
-            "site_url": site_url,
-            "provider": payment.provider,
-            "jenis": payment.method_type,
-            "info_akun": str(payment.account_info),
-            "waktu": datetime.now().isoformat()
-        })
-    
+
     def get_all_suspicious_accounts(self) -> List[dict]:
         if not self._check_connection():
             logger.error("Cannot query - database not connected")

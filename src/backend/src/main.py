@@ -1,9 +1,14 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+import os
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fastapi.middleware.cors import CORSMiddleware
 from celery.result import AsyncResult
 from datetime import datetime
 import logging
 from contextlib import asynccontextmanager
+from fastapi.responses import JSONResponse
+from weasyprint import HTML, CSS
+
+from jinja2 import Environment, FileSystemLoader
 
 from .worker import (
     cari_rekening_mencurigakan,
@@ -22,8 +27,10 @@ from .schema import (
     HealthResponse
 )
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+env = Environment(loader=FileSystemLoader("templates"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -85,6 +92,71 @@ async def cari_rekening_batch(request: MultipleSitusRequest):
     except Exception as e:
         logger.error(f"Error starting batch task: {e}")
         raise HTTPException(status_code=500, detail=f"Gagal memulai batch processing: {str(e)}")
+
+@app.post("/tasks/{task_id}/retry", response_model=TaskResponse)
+async def retry_failed_task(task_id: str):
+    """Retry a failed task by repushing it to Redis"""
+    try:
+        # Get original task result
+        task_result = AsyncResult(task_id, app=celery)
+        
+        if task_result.state != 'FAILURE':
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Task {task_id} is not in FAILURE state. Current state: {task_result.state}"
+            )
+        
+        # Get task info to determine if it was single or batch processing
+        task_info = task_result.info
+        
+        # Check if we can get original arguments from task
+        task_name = task_result.name
+        
+        if task_name == 'cari_rekening_mencurigakan':
+            # For single site, we need the URL - this would need to be stored somewhere
+            # For now, return error asking for manual resubmission
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot automatically retry single site tasks. Please resubmit the original URL."
+            )
+        elif task_name == 'cari_multiple_situs':
+            # For batch, same issue - we'd need the original URLs
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot automatically retry batch tasks. Please resubmit the original URLs."
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown task type: {task_name}"
+            )
+            
+    except Exception as e:
+        logger.error(f"Error retrying task {task_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Gagal retry task: {str(e)}")
+
+@app.post("/situs-judi/retry-url", response_model=TaskResponse)
+async def retry_url_processing(request: SitusJudiRequest):
+    """Retry processing for a specific URL (manual retry)"""
+    try:
+        task = cari_rekening_mencurigakan.delay(str(request.url))
+        logger.info(f"Retry pencarian rekening untuk URL: {request.url} (New Task ID: {task.id})")
+        return TaskResponse(task_id=task.id)
+    except Exception as e:
+        logger.error(f"Error retrying task for {request.url}: {e}")
+        raise HTTPException(status_code=500, detail=f"Gagal retry pencarian: {str(e)}")
+
+@app.post("/situs-judi/retry-batch", response_model=TaskResponse)
+async def retry_batch_processing(request: MultipleSitusRequest):
+    """Retry batch processing for multiple URLs (manual retry)"""
+    try:
+        urls = [str(url) for url in request.urls]
+        task = cari_multiple_situs.delay(urls)
+        logger.info(f"Retry batch processing untuk {len(urls)} URL (New Task ID: {task.id})")
+        return TaskResponse(task_id=task.id)
+    except Exception as e:
+        logger.error(f"Error retrying batch task: {e}")
+        raise HTTPException(status_code=500, detail=f"Gagal retry batch processing: {str(e)}")
 
 @app.get("/tasks/{task_id}", response_model=TaskStatus)
 async def get_task_status(task_id: str):
@@ -234,6 +306,27 @@ async def get_statistik_situs(url: str):
             statistik=None,
             error_message=f"Terjadi error saat mengambil statistik: {str(e)}"
         )
+
+@app.get("/report")
+async def generate_invoice(name: str = "report-123", amount: float = 123.45):
+    # Load template
+    template = env.get_template("report.html")
+    
+    # Full path to static CSS file (Windows-safe)
+    static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+    css_file = os.path.join(static_dir, "report.css")
+        
+    rendered_html = template.render(name=name, amount=amount)
+
+    # Generate PDF
+    if os.path.exists(css_file):
+        css = CSS(filename=css_file)
+        pdf_bytes = HTML(string=rendered_html).write_pdf(stylesheets=[css])
+    else:
+        logger.warning("CSS file not found, generating PDF without styling")
+        pdf_bytes = HTML(string=rendered_html).write_pdf()
+    
+    return Response(content=pdf_bytes, media_type="application/pdf")
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():

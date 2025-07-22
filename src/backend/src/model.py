@@ -1,45 +1,77 @@
 from pydantic import BaseModel, Field
+from typing import List, Optional
 from datetime import datetime
-from typing import List, Optional, Dict, Any
 from enum import Enum
-
 class AccountType(str, Enum):
     BANK_ACCOUNT = "bank_account"
     CRYPTO_WALLET = "crypto_wallet"
     PAYMENT_PROCESSOR = "payment_processor"
     MOBILE_MONEY = "mobile_money"
 
-class SuspiciousAccount(BaseModel):
-    account_number: str = Field(..., description="Nomor rekening atau identifier")
-    account_type: AccountType = Field(..., description="Jenis akun keuangan")
-    bank_name: Optional[str] = Field(None, description="Nama bank")
-    account_holder: Optional[str] = Field(None, description="Nama pemilik rekening")
-    
-class CryptoWallet(BaseModel):
-    wallet_address: str = Field(..., description="Alamat wallet")
-    cryptocurrency: str = Field(..., description="Jenis cryptocurrency")
-    
-class PaymentMethod(BaseModel):
-    method_type: str = Field(..., description="Jenis metode pembayaran")
-    provider: str = Field(..., description="Penyedia layanan")
-    account_info: Dict[str, Any] = Field(default_factory=dict, description="Informasi akun tambahan")
-    
-class GamblingSiteData(BaseModel):
-    site_url: str = Field(..., description="URL situs judi")
-    site_name: Optional[str] = Field(None, description="Nama situs judi")
-    extraction_timestamp: datetime = Field(default_factory=datetime.now, description="Waktu ekstraksi data")
-    suspicious_accounts: List[SuspiciousAccount] = Field(default_factory=list, description="Akun mencurigakan yang ditemukan")
-    crypto_wallets: List[CryptoWallet] = Field(default_factory=list, description="Wallet crypto yang ditemukan")
-    payment_methods: List[PaymentMethod] = Field(default_factory=list, description="Metode pembayaran yang ditemukan")
+class SiteInfo(BaseModel):
+    site_name: str
+    site_url: str
+    extraction_timestamp: Optional[datetime] = Field(default_factory=datetime.now, description="Timestamp of data extraction")
+    site_language: Optional[str] = None
+    registration_success: Optional[bool] = None
+    accessibility_notes: Optional[str] = None
 
+class BankAccount(BaseModel):
+    account_type: AccountType = AccountType.BANK_ACCOUNT
+    bank_name: str
+    account_number: str
+    account_holder: str
+    bank_code: Optional[str] = None
+    account_type_detail: Optional[str] = None
+    min_deposit: Optional[float] = None
+    max_deposit: Optional[float] = None
+    processing_time: Optional[str] = None
+    page_found: Optional[str] = None
+
+
+class DigitalWallet(BaseModel):
+    wallet_type: str
+    wallet_number: Optional[str] = None
+    wallet_name: Optional[str] = None
+    qr_code_available: bool = False
+    min_amount: Optional[float] = None
+    page_found: Optional[str] = None
+
+
+class AdditionalInfo(BaseModel):
+    customer_service_contacts: List[str] = Field(default_factory=list)
+    suspicious_indicators: List[str] = Field(default_factory=list)
+    security_measures: List[str] = Field(default_factory=list)
+    mobile_app_info: Optional[str] = None
+    withdrawal_instructions: List[str] = Field(default_factory=list)
+
+class CryptoWallet(BaseModel):
+    account_type: AccountType = AccountType.CRYPTO_WALLET
+    wallet_address: Optional[str] = Field(None, description="Alamat wallet")
+    cryptocurrency: Optional[str] = Field(None, description="Jenis cryptocurrency")
+    additional_info: Optional[str] = Field(None, description="Informasi tambahan tentang wallet")
+
+
+class PaymentGateway(BaseModel):
+    gateway_name: str
+    supported_methods: List[str] = Field(default_factory=list)
+    processing_time: Optional[str] = None
+    fees: Optional[str] = None
+    page_found: Optional[str] = None
+
+class GamblingSiteData(BaseModel):
+    site_info: SiteInfo
+    bank_accounts: List[BankAccount] = Field(default_factory=list)
+    digital_wallets: List[DigitalWallet] = Field(default_factory=list)
+    crypto_wallets: List[CryptoWallet] = Field(default_factory=list)
+    payment_gateways: List[PaymentGateway] = Field(default_factory=list)
+    additional_info: AdditionalInfo
+    
+class PaymentDiscoveryResult(BaseModel):
+    payment_methods: List[str] = Field(default_factory=list, description="List of discovered payment methods")
 class CrawlResult(BaseModel):
     task_id: str
     status: str
     gambling_site_data: Optional[GamblingSiteData] = None
     error_message: Optional[str] = None
     processing_time: Optional[float] = None
-
-# For browser-use extraction
-class Product(BaseModel):
-    name: str
-    price: float

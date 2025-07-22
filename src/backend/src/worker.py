@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from typing import Dict, Any
-from .crawler import extract_gambling_financial_data
+from .crawler import extract_gambling_financial_data, discover_site_payment_methods
 from .database import db_handler
 from .model import CrawlResult
 
@@ -29,7 +29,21 @@ celery.conf.update(
     task_soft_time_limit=25 * 60,
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=50,
+    # Retry configuration
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    # Result backend settings
+    result_expires=3600,
+    result_persistent=True,
+    # Error handling
+    task_store_errors_even_if_ignored=True,
+    task_ignore_result=False,
 )
+
+def calculate_retry_delay(retry_count: int, base_delay: int = 60, max_delay: int = 600) -> int:
+    """Calculate exponential backoff delay for retry attempts"""
+    delay = min(base_delay * (2 ** retry_count), max_delay)
+    return delay
 
 def _process_single_site(url: str, task_id: str, update_callback=None) -> Dict[str, Any]:
     start_time = time.time()
@@ -79,10 +93,10 @@ def _process_single_site(url: str, task_id: str, update_callback=None) -> Dict[s
             'url': url,
             'task_id': task_id,
             'processing_time': processing_time,
-            'rekening_ditemukan': len(gambling_data.suspicious_accounts),
+            'rekening_ditemukan': len(gambling_data.bank_accounts),
             'crypto_ditemukan': len(gambling_data.crypto_wallets),
-            'payment_ditemukan': len(gambling_data.payment_methods),
-            'nama_situs': gambling_data.site_name
+            'payment_ditemukan': len(gambling_data.payment_gateways),
+            'nama_situs': gambling_data.site_info.site_name
         }
         
     except Exception as e:
@@ -98,17 +112,24 @@ def _process_single_site(url: str, task_id: str, update_callback=None) -> Dict[s
                     'status': 'Gagal memproses situs judi',
                     'error': error_message,
                     'url': url,
+                    'exc_type': type(e).__name__,
+                    'exc_message': error_message,
                     'processing_time': processing_time
                 }
             )
         
-        return {
+        # Return a properly serializable error result
+        error_result = {
             'status': 'FAILURE',
             'url': url,
             'task_id': task_id,
+            'exc_type': type(e).__name__,
+            'exc_message': error_message,
             'error_message': error_message,
             'processing_time': processing_time
         }
+        
+        return error_result
 
 def _process_multiple_sites(urls: list, task_id: str, update_callback=None) -> Dict[str, Any]:
     """Core logic for processing multiple gambling sites - extracted for testing"""
@@ -151,9 +172,9 @@ def _process_multiple_sites(urls: list, task_id: str, update_callback=None) -> D
                     results.append({
                         'url': url,
                         'status': 'SUCCESS',
-                        'rekening_mencurigakan': len(gambling_data.suspicious_accounts),
+                        'rekening_mencurigakan': len(gambling_data.bank_accounts),
                         'crypto_wallets': len(gambling_data.crypto_wallets),
-                        'payment_methods': len(gambling_data.payment_methods)
+                        'payment_methods': len(gambling_data.payment_gateways)
                     })
                 else:
                     gagal_ekstraksi += 1
@@ -193,16 +214,37 @@ def _process_multiple_sites(urls: list, task_id: str, update_callback=None) -> D
         return {
             'status': 'FAILURE',
             'task_id': task_id,
+            'exc_type': type(e).__name__,
             'error_message': error_message,
             'processing_time': processing_time
         }
 
-@celery.task(bind=True, name='cari_rekening_mencurigakan')
+@celery.task(bind=True, name='cari_rekening_mencurigakan', autoretry_for=(Exception,), retry_kwargs={'max_retries': 3})
 def cari_rekening_mencurigakan(self, url: str) -> Dict[str, Any]:
-    """Celery task wrapper for single site processing"""
-    return _process_single_site(url, self.request.id, self.update_state)
+    """Celery task wrapper for single site processing with auto-retry"""
+    try:
+        return _process_single_site(url, self.request.id, self.update_state)
+    except Exception as exc:
+        logger.error(f"Task failed for URL {url}, attempt {self.request.retries + 1}/4: {exc}")
+        if self.request.retries < 3:  # 0, 1, 2, 3 = 4 attempts total
+            retry_delay = calculate_retry_delay(self.request.retries)
+            logger.info(f"Retrying task for URL {url} in {retry_delay} seconds...")
+            raise self.retry(countdown=retry_delay, exc=exc)
+        else:
+            logger.error(f"Max retries reached for URL {url}, task permanently failed")
+            raise exc
 
-@celery.task(bind=True, name='cari_multiple_situs')
+@celery.task(bind=True, name='cari_multiple_situs', autoretry_for=(Exception,), retry_kwargs={'max_retries': 2, 'countdown': 120})
 def cari_multiple_situs(self, urls: list) -> Dict[str, Any]:
-    """Celery task wrapper for multiple site processing"""
-    return _process_multiple_sites(urls, self.request.id, self.update_state)
+    """Celery task wrapper for multiple site processing with auto-retry"""
+    try:
+        return _process_multiple_sites(urls, self.request.id, self.update_state)
+    except Exception as exc:
+        logger.error(f"Batch task failed for {len(urls)} URLs, attempt {self.request.retries + 1}/2: {exc}")
+        if self.request.retries < 1:  # 0, 1 = 2 attempts total
+            logger.info(f"Retrying batch task for {len(urls)} URLs in 120 seconds...")
+            raise self.retry(countdown=120, exc=exc)
+        else:
+            logger.error(f"Max retries reached for batch task, permanently failed")
+            raise exc
+
