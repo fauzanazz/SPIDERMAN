@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime
 from enum import Enum
 class AccountType(str, Enum):
     BANK_ACCOUNT = "bank_account"
@@ -11,7 +10,6 @@ class AccountType(str, Enum):
 class SiteInfo(BaseModel):
     site_name: str
     site_url: str
-    extraction_timestamp: Optional[datetime] = Field(default_factory=datetime.now, description="Timestamp of data extraction")
     site_language: Optional[str] = None
     registration_success: Optional[bool] = None
     accessibility_notes: Optional[str] = None

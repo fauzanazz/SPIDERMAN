@@ -7,7 +7,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse
 from weasyprint import HTML, CSS
-
+from . import storage
 from jinja2 import Environment, FileSystemLoader
 
 from .worker import (
@@ -19,6 +19,7 @@ from .database import db_handler
 from .schema import (
     SitusJudiRequest,
     MultipleSitusRequest,
+    ReportRequest,
     TaskResponse, 
     TaskStatus,
     DaftarAkunResponse,
@@ -307,16 +308,23 @@ async def get_statistik_situs(url: str):
             error_message=f"Terjadi error saat mengambil statistik: {str(e)}"
         )
 
-@app.get("/report")
-async def generate_invoice(name: str = "report-123", amount: float = 123.45):
+@app.post("/report")
+async def generate_report(request: ReportRequest):
     # Load template
     template = env.get_template("report.html")
-    
+    img_path = "../screenshots/EMI_SARPONIKA.png"
+    # storage.storage_manager.generate_presigned_url(request.oss_key)
     # Full path to static CSS file (Windows-safe)
     static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
     css_file = os.path.join(static_dir, "report.css")
-        
-    rendered_html = template.render(name=name, amount=amount)
+    
+    rendered_html = template.render(
+        img_path=img_path, 
+        nomor_rekening=request.nomor_rekening, 
+        pemilik_rekening=request.pemilik_rekening, 
+        nama_bank=request.nama_bank, 
+        nomor_akun=request.nomor_akun
+    )
 
     # Generate PDF
     if os.path.exists(css_file):

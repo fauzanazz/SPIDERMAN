@@ -4,6 +4,8 @@ import json
 import logging
 import asyncio
 import traceback
+import base64
+from . import storage
 from typing import Optional, List
 from browser_use import Agent, Controller
 import datetime
@@ -31,6 +33,20 @@ def extract_json_from_text(text: str) -> str:
     except (ValueError, json.JSONDecodeError) as e:
         print(f"Error extracting JSON: {e}")
         return '{"site_url": "unknown", "site_name": "unknown"}'
+
+def base64_to_image(base64_string: str, output_filename: str) -> str:
+    """Convert base64 string to image."""
+    if not os.path.exists(os.path.dirname(output_filename)):
+        os.makedirs(os.path.dirname(output_filename))
+
+    # Handle data URL format if present
+    if base64_string.startswith('data:'):
+        base64_string = base64_string.split(',', 1)[1]
+
+    img_data = base64.b64decode(base64_string)
+    with open(output_filename, "wb") as f:
+        f.write(img_data)
+    return output_filename
 
 class IndonesianAccountExtractor:
     def __init__(self):
@@ -129,7 +145,7 @@ class IndonesianAccountExtractor:
             logger.info(f"🎯 [CRAWLER-PHASE-2] Generating multiple identities for comprehensive extraction")
             
             # Generate random Indonesian identities for multiple registration attempts
-            num_identities = min(len(discovered_payment_methods), 3) # Cap at 4 to avoid being too aggressive
+            num_identities = min(len(discovered_payment_methods), 1) # Cap at 4 to avoid being too aggressive
             identities = []
             for i in range(num_identities):
                 identity = generate_random_identity()
@@ -191,6 +207,30 @@ class IndonesianAccountExtractor:
             
             logger.info(f"✅ [CRAWLER-SUCCESS] Berhasil ekstrak data dari {url}")
             logger.info(f"📊 [CRAWLER-SUMMARY] {url} - Accounts: {len(gambling_data.bank_accounts)}, Wallets: {len(gambling_data.crypto_wallets)}")
+            
+            # Save screenshots with account holder name
+            screenshots = result.screenshots()
+        
+            # Get account holder name for screenshot naming
+            account_holder_name = self._get_account_holder_name(gambling_data)
+            logger.debug(f"📸 [CRAWLER-ACCOUNT-HOLDER] Using account holder: {account_holder_name}")
+            
+            # Only save the last screenshot
+            if screenshots:
+                last_screenshot = screenshots[-1]  # Get the last screenshot
+                path = f"./screenshots/{account_holder_name}.png"
+                img_path = base64_to_image(
+                    base64_string=str(last_screenshot),
+                    output_filename=path
+                )
+                logger.debug(f"📸 [CRAWLER-SCREENSHOT-SAVED] Last screenshot saved: {img_path}")
+            else:
+                logger.warning(f"⚠️ [CRAWLER-NO-SCREENSHOTS] No screenshots available for {url}")
+
+            await storage.storage_manager.save_file(
+               path,
+               path
+            )
             return gambling_data
                 
         except Exception as e:
@@ -215,6 +255,33 @@ class IndonesianAccountExtractor:
             if bank.lower() in content_lower:
                 return bank.upper()
         return None
+    
+    def _get_account_holder_name(self, gambling_data: GamblingSiteData) -> str:
+        """
+        Get account holder name for screenshot naming
+        
+        Args:
+            gambling_data (GamblingSiteData): The extracted gambling site data
+            
+        Returns:
+            str: Account holder name or fallback identifier
+        """
+        # Check bank accounts first
+        if gambling_data.bank_accounts and gambling_data.bank_accounts[0].account_holder:
+            account_holder = gambling_data.bank_accounts[0].account_holder.strip()
+            if account_holder:
+                # Clean the name for filename use
+                return account_holder.replace(" ", "_").replace(".", "").replace("/", "")[:30]
+        
+        # Check digital wallets
+        if gambling_data.digital_wallets and gambling_data.digital_wallets[0].wallet_name:
+            wallet_name = gambling_data.digital_wallets[0].wallet_name.strip()
+            if wallet_name:
+                return wallet_name.replace(" ", "_").replace(".", "").replace("/", "")[:30]
+        
+        # Fallback to site name
+        site_name = gambling_data.site_info.site_name.replace(" ", "_").replace(":", "").replace("/", "")
+        return site_name[:20] if site_name else "UNKNOWN_ACCOUNT"
     
     def _create_error_result(self, url: str, error_message: str) -> GamblingSiteData:
         logger.warning(f"⚠️ [CRAWLER-ERROR-RESULT] Membuat error result untuk {url}: {error_message}")
