@@ -2,7 +2,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.server
     ports:
       - "8000:8000"
     env_file:
@@ -18,14 +18,22 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: on-failure
+    restart: unless-stopped
     networks:
       - spiderman-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   worker:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.worker
     env_file:
       - .env
     environment:
@@ -39,10 +47,18 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: on-failure
+    restart: unless-stopped
     networks:
       - spiderman-network
-    command: ["celery", "-A", "src.worker", "worker", "--loglevel=info"]
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    scale: 2
 
   db:
     image: neo4j:2025
