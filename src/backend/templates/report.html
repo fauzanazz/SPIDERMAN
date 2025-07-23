@@ -8,17 +8,21 @@
   <body>
     <article id="cover">
       <h1>Surat Permintaan Penghentian Sementara Transaksi Keuangan </h1>
-      <img src="{{ img_path }}">
       
       <address>
         {{ nomor_rekening }}<br>
         {{ pemilik_rekening }}<br>
-       
       </address>
+      
       <address>
-         {{ nama_bank }}<br>
-        {{ nomor_akun }}
+        {{ nama_bank }}<br>
       </address>
+      
+    </article>
+    <article>
+        <div style="page-break-before: always; text-align: center; margin: 20px 0; padding: 10px;">
+          <img src="{{ img_path }}" style="max-width: 100%; height: auto; max-height: 400px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        </div>
     </article>
 
   </body>

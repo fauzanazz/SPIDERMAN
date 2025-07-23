@@ -15,7 +15,6 @@ class ReportRequest(BaseModel):
     nomor_rekening: str = Field(..., description="Nomor rekening untuk laporan")
     pemilik_rekening: str = Field(..., description="Nama pemilik rekening")
     nama_bank: str = Field(..., description="Nama bank")
-    nomor_akun: str = Field(..., description="Nomor akun")
     oss_key: str = Field(..., description="Key untuk mengakses gambar di storage")
 
 class TaskResponse(BaseModel):

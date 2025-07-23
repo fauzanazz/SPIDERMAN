@@ -25,6 +25,7 @@ class BankAccount(BaseModel):
     max_deposit: Optional[float] = None
     processing_time: Optional[str] = None
     page_found: Optional[str] = None
+    oss_key: Optional[str] = None
 
 
 class DigitalWallet(BaseModel):
@@ -34,14 +35,9 @@ class DigitalWallet(BaseModel):
     qr_code_available: bool = False
     min_amount: Optional[float] = None
     page_found: Optional[str] = None
+    oss_key: Optional[str] = None
 
 
-class AdditionalInfo(BaseModel):
-    customer_service_contacts: List[str] = Field(default_factory=list)
-    suspicious_indicators: List[str] = Field(default_factory=list)
-    security_measures: List[str] = Field(default_factory=list)
-    mobile_app_info: Optional[str] = None
-    withdrawal_instructions: List[str] = Field(default_factory=list)
 
 class CryptoWallet(BaseModel):
     account_type: AccountType = AccountType.CRYPTO_WALLET
@@ -63,8 +59,8 @@ class GamblingSiteData(BaseModel):
     digital_wallets: List[DigitalWallet] = Field(default_factory=list)
     crypto_wallets: List[CryptoWallet] = Field(default_factory=list)
     payment_gateways: List[PaymentGateway] = Field(default_factory=list)
-    additional_info: AdditionalInfo
-    
+
+
 class PaymentDiscoveryResult(BaseModel):
     payment_methods: List[str] = Field(default_factory=list, description="List of discovered payment methods")
 class CrawlResult(BaseModel):

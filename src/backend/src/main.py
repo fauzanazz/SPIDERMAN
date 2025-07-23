@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fastapi.middleware.cors import CORSMiddleware
 from celery.result import AsyncResult
@@ -7,7 +8,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse
 from weasyprint import HTML, CSS
-from . import storage
+from .storage import storage_manager
 from jinja2 import Environment, FileSystemLoader
 
 from .worker import (
@@ -308,22 +309,28 @@ async def get_statistik_situs(url: str):
             error_message=f"Terjadi error saat mengambil statistik: {str(e)}"
         )
 
-@app.post("/report")
-async def generate_report(request: ReportRequest):
+@app.get("/report")
+async def generate_report(
+    oss_key: str,
+    nomor_rekening: str,
+    pemilik_rekening: str,
+    nama_bank: str,
+):
     # Load template
     template = env.get_template("report.html")
-    img_path = "../screenshots/EMI_SARPONIKA.png"
-    # storage.storage_manager.generate_presigned_url(request.oss_key)
-    # Full path to static CSS file (Windows-safe)
+    img_path = storage_manager.generate_presigned_url(oss_key, expiration=3600)
+
+    logger.info(f"Generating report for {nomor_rekening} with image {img_path}")
+
     static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
     css_file = os.path.join(static_dir, "report.css")
     
     rendered_html = template.render(
         img_path=img_path, 
-        nomor_rekening=request.nomor_rekening, 
-        pemilik_rekening=request.pemilik_rekening, 
-        nama_bank=request.nama_bank, 
-        nomor_akun=request.nomor_akun
+        pemilik_rekening=pemilik_rekening, 
+        nama_bank=nama_bank, 
+        nomor_rekening=nomor_rekening,
+
     )
 
     # Generate PDF
@@ -334,8 +341,16 @@ async def generate_report(request: ReportRequest):
         logger.warning("CSS file not found, generating PDF without styling")
         pdf_bytes = HTML(string=rendered_html).write_pdf()
     
-    return Response(content=pdf_bytes, media_type="application/pdf")
-
+    # Create filename with account number and timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"Laporan_Pembekuan_Rekening_{nomor_rekening}_{timestamp}.pdf"
+    
+    return Response(
+        content=pdf_bytes, 
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+    
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     database_connected = db_handler.connected and db_handler._check_connection()

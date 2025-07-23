@@ -4,7 +4,7 @@ import logging
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from urllib.parse import urlparse
-from .model import BankAccount, CryptoWallet, GamblingSiteData, PaymentGateway
+from .model import BankAccount, CryptoWallet, DigitalWallet, GamblingSiteData, PaymentGateway
 logger = logging.getLogger(__name__)
 
 class Neo4jHandler:
@@ -202,7 +202,6 @@ class Neo4jHandler:
                     except Exception as e:
                         logger.error(f"[DB-ACCOUNT-FAILED] {i}/{len(valid_bank_accounts)} - {account.account_number}: {str(e)}")
                         raise
-                
                 # Process crypto wallets with detailed logging
                 logger.debug(f"[DB-WALLETS] Memproses {len(valid_crypto_wallets)} crypto wallet yang valid...")
                 for i, wallet in enumerate(valid_crypto_wallets, 1):
@@ -246,13 +245,14 @@ class Neo4jHandler:
             a.nama_bank = $nama_bank,
             a.pemilik_rekening = $pemilik_rekening,
             a.terakhir_update = $waktu
-        WITH a, $bank_code as bank_code, $account_type_detail as account_type_detail,
-             $min_deposit as min_deposit, $max_deposit as max_deposit, $processing_time as processing_time
+        WITH g, a, $bank_code as bank_code, $account_type_detail as account_type_detail,
+             $min_deposit as min_deposit, $max_deposit as max_deposit, $processing_time as processing_time, $oss_key as oss_key
         SET a.bank_code = CASE WHEN bank_code IS NOT NULL AND bank_code <> '' THEN bank_code ELSE a.bank_code END,
             a.account_type_detail = CASE WHEN account_type_detail IS NOT NULL AND account_type_detail <> '' THEN account_type_detail ELSE a.account_type_detail END,
             a.min_deposit = CASE WHEN min_deposit IS NOT NULL THEN min_deposit ELSE a.min_deposit END,
             a.max_deposit = CASE WHEN max_deposit IS NOT NULL THEN max_deposit ELSE a.max_deposit END,
-            a.processing_time = CASE WHEN processing_time IS NOT NULL AND processing_time <> '' THEN processing_time ELSE a.processing_time END
+            a.processing_time = CASE WHEN processing_time IS NOT NULL AND processing_time <> '' THEN processing_time ELSE a.processing_time END,
+            a.oss_key = CASE WHEN oss_key IS NOT NULL AND oss_key <> '' THEN oss_key ELSE a.oss_key END
         WITH g, a
         MERGE (g)-[:MENGGUNAKAN_REKENING]->(a)
         """
@@ -269,6 +269,7 @@ class Neo4jHandler:
                 "min_deposit": account.min_deposit,
                 "max_deposit": account.max_deposit,
                 "processing_time": account.processing_time if account.processing_time and account.processing_time.strip() else None,
+                "oss_key": account.oss_key if account.oss_key and account.oss_key.strip() else None,
                 "waktu": datetime.now().isoformat()
             })
         except Exception as e:

@@ -275,21 +275,22 @@ PRIMARY APPROACH: Sequential Registration with Different Identities and Isolated
    - Extract and log:
      - All financial account details (account number, holder name, bank, QR presence)
      - Which payment method appeared
-     - Whether the method matches the user’s registered bank
-   - 🖼️ Take a screenshot showing:
-      - The account holder's name
-      - Bank/payment info
-      - Website domain or logo visible
-      - Preferably the full screen including the address bar
-
-      📁 Save screenshot using this filename format:
-      [IDENTITY_NAME]_on_[SITE_DOMAIN]_evidence.png
-
-      Example:
-      SintaAmalia_on_arab19.sbs_evidence.png
-   - 🚨 Do NOT switch identity immediately.
-   - ✅ Make sure **all financial/payment details** have been successfully extracted and **nothing new appears** on page refresh or after short wait.
-     - Only continue to the next identity when confirmed there's no additional data available.
+     - Whether the method matches the user's registered bank
+   - 🖼️ ONLY take screenshots when SUSPICIOUS ACCOUNTS are detected:
+      ⚠️ Screenshot ONLY if you find:
+      - Multiple similar account holder names across different banks
+      - Suspicious account patterns or numbers
+      - Accounts with unusual or fake-looking names
+      - Clear indicators of money laundering or fraud
+      - Accounts that appear to be shell companies
+      
+      📁 When suspicious accounts are found, save screenshot using format:
+      SUSPICIOUS_[IDENTITY_NAME]_on_[SITE_DOMAIN]_evidence.png
+      
+      ✅ DO NOT take screenshots for normal/legitimate-looking accounts
+      ✅ DO NOT take routine screenshots during registration
+      ✅ ONLY screenshot when suspicious financial activity is detected
+    - Only continue to the next identity when confirmed there's no additional data available.
 
 2. Identity Registration Loop (IDENTITY 2 → N):
    - For each new identity:
@@ -385,25 +386,7 @@ After Submitting the Form:
      - **Do NOT interact** with any other page elements.
      - Immediately click the **Submit** button.
   - If form-related issue → modify input and try again.
-
-Failure Handling Strategy:
---------------------------
-
-If a registration or CAPTCHA attempt fails, follow the recovery steps below:
-
-🔁 1. Adjust Input Format for CAPTCHA:
-   - Retry with **alternative input styles** to match expected format.
-
-   💡 Try the following adjustments:
-   - 🔹 Add **spaces** between letters or numbers (e.g., change "ABC12" → "A B C 1 2").
-   - 🔹 Try entering the code in **all uppercase** or **all lowercase** (e.g., "abc12" → "ABC12").
-   - 🔹 **Avoid using symbols** (e.g., "@", "#", "-") unless explicitly shown in the CAPTCHA.
-   - 🔹 If the CAPTCHA is case-sensitive, match **exactly** as displayed.
-   - 🔹 If the CAPTCHA has a reload option, click to get a **new challenge**.
-
-🔄 2. Retry Submission:
-   - After making input adjustments, resubmit the form.
-   - If it fails again, wait a few seconds before retrying to avoid detection or lockout.
+----------------------
 
 - After **3 failed CAPTCHA attempts**:
   - **Force a full page reload** to refresh the CAPTCHA challenge.

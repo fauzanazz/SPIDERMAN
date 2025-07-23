@@ -50,8 +50,11 @@ class StorageManager:
                     endpoint_url=self.endpoint_url,
                     aws_access_key_id=access_key,
                     aws_secret_access_key=secret_key,
-                    region_name='us-west-1',
-                    config=Config(signature_version='s3')
+                    region_name='auto',
+                    config=Config(
+                        signature_version='s3v4',
+                        s3={'addressing_style': 'path'}
+                    )
                 )
                 
                 self.s3_client = boto3.client(
@@ -59,8 +62,11 @@ class StorageManager:
                     endpoint_url=self.endpoint_url,
                     aws_access_key_id=access_key,
                     aws_secret_access_key=secret_key,
-                    region_name='us-west-1',
-                    config=Config(signature_version='s3')
+                    region_name='auto',
+                    config=Config(
+                        signature_version='s3v4',
+                        s3={'addressing_style': 'path'}
+                    )
                 )
                 
                 logger.info("✓ B2 OSS resource and client initialized successfully on-demand.")
@@ -107,7 +113,7 @@ class StorageManager:
         else:
             logger.error("B2 client not available or not configured. File will NOT be saved locally. Raising error.")
             raise RuntimeError("B2 OSS not configured or not available. Cannot upload file.")
-
+        
     def generate_presigned_url(self, oss_key: str, expiration: int = 3600) -> str:
         """
         Generate a presigned URL for accessing an object in B2 OSS

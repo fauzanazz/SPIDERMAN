@@ -11,28 +11,8 @@ from browser_use import Agent, Controller
 import datetime
 
 from .config import llm_config, get_extraction_instruction, generate_random_identity, pre_registration_payment_discovery_prompt
-from .model import AdditionalInfo, GamblingSiteData, PaymentDiscoveryResult, SiteInfo
+from .model import  GamblingSiteData, PaymentDiscoveryResult, SiteInfo
 logger = logging.getLogger(__name__)
-
-# Standalone utility function for extracting JSON from text
-def extract_json_from_text(text: str) -> str:
-    """
-    Extract JSON object from text string.
-    
-    Args:
-        text (str): Text containing JSON object
-        
-    Returns:
-        str: JSON string or empty JSON object string if parsing fails
-    """
-    try:
-        start = text.index('{')
-        end = text.rindex('}') + 1
-        json_str = text[start:end]
-        return json_str
-    except (ValueError, json.JSONDecodeError) as e:
-        print(f"Error extracting JSON: {e}")
-        return '{"site_url": "unknown", "site_name": "unknown"}'
 
 def base64_to_image(base64_string: str, output_filename: str) -> str:
     """Convert base64 string to image."""
@@ -176,7 +156,6 @@ class IndonesianAccountExtractor:
             
             # Run the agent with timeout
             try:
-               
                 result = await agent.run() 
                 # logger.info(f"[CRAWLER-AGENT] result: {result.final_result()}")
                 logger.debug(f"✅ [CRAWLER-AGENT-SUCCESS] Agent berhasil untuk: {url}")
@@ -215,10 +194,10 @@ class IndonesianAccountExtractor:
             account_holder_name = self._get_account_holder_name(gambling_data)
             logger.debug(f"📸 [CRAWLER-ACCOUNT-HOLDER] Using account holder: {account_holder_name}")
             
+            path = f"./screenshots/{account_holder_name}.png"
             # Only save the last screenshot
             if screenshots:
                 last_screenshot = screenshots[-1]  # Get the last screenshot
-                path = f"./screenshots/{account_holder_name}.png"
                 img_path = base64_to_image(
                     base64_string=str(last_screenshot),
                     output_filename=path
@@ -226,13 +205,19 @@ class IndonesianAccountExtractor:
                 logger.debug(f"📸 [CRAWLER-SCREENSHOT-SAVED] Last screenshot saved: {img_path}")
             else:
                 logger.warning(f"⚠️ [CRAWLER-NO-SCREENSHOTS] No screenshots available for {url}")
-
-            await storage.storage_manager.save_file(
-               path,
-               path
-            )
-            return gambling_data
                 
+
+            oss_key = await storage.storage_manager.save_file(
+               path,
+               account_holder_name
+            )
+
+            logger.info(f"📤 [CRAWLER-OSS-SAVE] Screenshot saved to OSS with key: {oss_key}")
+            
+            # Add the oss_key to the gambling data before returning
+            gambling_data.bank_accounts[-1].oss_key = oss_key
+            return gambling_data
+
         except Exception as e:
             logger.error(f"💥 [CRAWLER-CRITICAL-ERROR] Error ekstrak data dari {url}: {str(e)}")
             logger.error(f"🔍 [CRAWLER-ERROR-TYPE] Error type: {type(e).__name__}")
@@ -307,7 +292,8 @@ class IndonesianAccountExtractor:
                 suspicious_indicators=[f"Extraction failed: {safe_accessibility_msg}"],
                 security_measures=[],
                 withdrawal_instructions=[]
-            )
+            ),
+            oss_key=None
         )
 
 indonesian_extractor = IndonesianAccountExtractor()
