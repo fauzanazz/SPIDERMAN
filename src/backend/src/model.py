@@ -56,7 +56,6 @@ class PaymentGateway(BaseModel):
 class GamblingSiteData(BaseModel):
     site_info: SiteInfo
     bank_accounts: List[BankAccount] = Field(default_factory=list)
-    digital_wallets: List[DigitalWallet] = Field(default_factory=list)
     crypto_wallets: List[CryptoWallet] = Field(default_factory=list)
     payment_gateways: List[PaymentGateway] = Field(default_factory=list)
 

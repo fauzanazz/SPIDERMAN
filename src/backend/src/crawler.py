@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import re
 import json
 import logging
@@ -7,7 +8,7 @@ import traceback
 import base64
 from . import storage
 from typing import Optional, List
-from browser_use import Agent, Controller
+from browser_use import Agent, Controller, ActionResult, BrowserContext 
 import datetime
 
 from .config import llm_config, get_extraction_instruction, generate_random_identity, pre_registration_payment_discovery_prompt
@@ -70,10 +71,12 @@ class IndonesianAccountExtractor:
             agent = Agent(
                 task=f"Navigate to {url} and {pre_registration_payment_discovery_prompt}",
                 llm=llm_config,
-                headless=False,
-                controller=controller
+                headless=True,
+                controller=controller,
+                capture_screenshots=False, 
             )
-            
+
+           
             logger.debug(f"🤖 [PAYMENT-DISCOVERY-AGENT] Menjalankan discovery agent untuk: {url}")
             
             # Run the discovery agent
@@ -125,7 +128,7 @@ class IndonesianAccountExtractor:
             logger.info(f"🎯 [CRAWLER-PHASE-2] Generating multiple identities for comprehensive extraction")
             
             # Generate random Indonesian identities for multiple registration attempts
-            num_identities = min(len(discovered_payment_methods), 1) # Cap at 4 to avoid being too aggressive
+            num_identities = min(len(discovered_payment_methods), 3) # Cap at 4 to avoid being too aggressive
             identities = []
             for i in range(num_identities):
                 identity = generate_random_identity()
@@ -148,9 +151,22 @@ class IndonesianAccountExtractor:
             agent = Agent(
                 task=task,
                 llm=llm_config,
-                headless=False,
-                controller=controller
+                headless=True,
+                controller=controller,
+                capture_screenshots=False
             )
+
+            @controller.action('Save a screenshot of the current page with the name of the account holder exist in this page')
+            async def save_screenshot(browser: BrowserContext):
+                page = await browser.get_current_page()
+                screenshot = await page.screenshot(full_page=True, animations='disabled')
+                filename = f"./screenshots/screenshot_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                with open(filename, 'wb') as f:
+                    f.write(screenshot)
+                return ActionResult(
+                    extracted_content=f'Saved a screenshot of the page to {filename}',
+                    include_in_memory=True
+                )
             
             logger.debug(f"🤖 [CRAWLER-AGENT] Menjalankan agent untuk: {url}")
             
@@ -187,35 +203,28 @@ class IndonesianAccountExtractor:
             logger.info(f"✅ [CRAWLER-SUCCESS] Berhasil ekstrak data dari {url}")
             logger.info(f"📊 [CRAWLER-SUMMARY] {url} - Accounts: {len(gambling_data.bank_accounts)}, Wallets: {len(gambling_data.crypto_wallets)}")
             
-            # Save screenshots with account holder name
-            screenshots = result.screenshots()
-        
-            # Get account holder name for screenshot naming
-            account_holder_name = self._get_account_holder_name(gambling_data)
-            logger.debug(f"📸 [CRAWLER-ACCOUNT-HOLDER] Using account holder: {account_holder_name}")
-            
-            path = f"./screenshots/{account_holder_name}.png"
-            # Only save the last screenshot
-            if screenshots:
-                last_screenshot = screenshots[-1]  # Get the last screenshot
-                img_path = base64_to_image(
-                    base64_string=str(last_screenshot),
-                    output_filename=path
-                )
-                logger.debug(f"📸 [CRAWLER-SCREENSHOT-SAVED] Last screenshot saved: {img_path}")
-            else:
-                logger.warning(f"⚠️ [CRAWLER-NO-SCREENSHOTS] No screenshots available for {url}")
-                
 
-            oss_key = await storage.storage_manager.save_file(
-               path,
-               account_holder_name
-            )
+            screenshot_folder = Path("./screenshots")
 
-            logger.info(f"📤 [CRAWLER-OSS-SAVE] Screenshot saved to OSS with key: {oss_key}")
+            if screenshot_folder.exists():
+                existing_files = list(screenshot_folder.glob("*.png"))
+                for i, file in enumerate(existing_files):
+                    account_holder_name = self._get_account_holder_name(gambling_data, i)  # includes extension, e.g., "john_doe.png"
+                    path = str(file)  # keeps relative path, e.g., "./screenshots/john_doe.png"
+
+                    oss_key = await storage.storage_manager.save_file(
+                        path,
+                        account_holder_name
+                    )
+                    gambling_data.bank_accounts[i].oss_key = oss_key
+                    logger.info(f"📤 [CRAWLER-OSS-SAVE] Screenshot saved to OSS with key: {oss_key}")
+          
+
+                    try:
+                        os.remove(file)
+                    except Exception as e:
+                        logger.error(f"Failed to delete {file}: {e}")
             
-            # Add the oss_key to the gambling data before returning
-            gambling_data.bank_accounts[-1].oss_key = oss_key
             return gambling_data
 
         except Exception as e:
@@ -240,8 +249,8 @@ class IndonesianAccountExtractor:
             if bank.lower() in content_lower:
                 return bank.upper()
         return None
-    
-    def _get_account_holder_name(self, gambling_data: GamblingSiteData) -> str:
+
+    def _get_account_holder_name(self, gambling_data: GamblingSiteData, index: int) -> str:
         """
         Get account holder name for screenshot naming
         
@@ -252,17 +261,17 @@ class IndonesianAccountExtractor:
             str: Account holder name or fallback identifier
         """
         # Check bank accounts first
-        if gambling_data.bank_accounts and gambling_data.bank_accounts[0].account_holder:
-            account_holder = gambling_data.bank_accounts[0].account_holder.strip()
+        if gambling_data.bank_accounts and gambling_data.bank_accounts[index].account_holder:
+            account_holder = gambling_data.bank_accounts[index].account_holder.strip()
             if account_holder:
                 # Clean the name for filename use
                 return account_holder.replace(" ", "_").replace(".", "").replace("/", "")[:30]
         
         # Check digital wallets
-        if gambling_data.digital_wallets and gambling_data.digital_wallets[0].wallet_name:
-            wallet_name = gambling_data.digital_wallets[0].wallet_name.strip()
-            if wallet_name:
-                return wallet_name.replace(" ", "_").replace(".", "").replace("/", "")[:30]
+        # if gambling_data.digital_wallets and gambling_data.digital_wallets[index].wallet_name:
+        #     wallet_name = gambling_data.digital_wallets[index].wallet_name.strip()
+        #     if wallet_name:
+        #         return wallet_name.replace(" ", "_").replace(".", "").replace("/", "")[:30]
         
         # Fallback to site name
         site_name = gambling_data.site_info.site_name.replace(" ", "_").replace(":", "").replace("/", "")
@@ -284,15 +293,8 @@ class IndonesianAccountExtractor:
                 accessibility_notes=f"Extraction failed: {safe_accessibility_msg}"
             ),
             bank_accounts=[],
-            digital_wallets=[],
             crypto_wallets=[],
             payment_gateways=[],
-            additional_info=AdditionalInfo(
-                customer_service_contacts=[],
-                suspicious_indicators=[f"Extraction failed: {safe_accessibility_msg}"],
-                security_measures=[],
-                withdrawal_instructions=[]
-            ),
             oss_key=None
         )
 
