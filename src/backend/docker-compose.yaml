@@ -61,7 +61,7 @@ services:
     scale: 2
 
   db:
-    image: neo4j:2025
+    image: neo4j:5.15.0
     container_name: neo4j-gambling-finder
     restart: always
     ports:
