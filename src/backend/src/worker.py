@@ -4,9 +4,6 @@ import asyncio
 import logging
 import time
 from typing import Dict, Any
-from .crawler import extract_gambling_financial_data, discover_site_payment_methods
-from .database import db_handler
-from .model import CrawlResult
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +43,10 @@ def calculate_retry_delay(retry_count: int, base_delay: int = 60, max_delay: int
     return delay
 
 def _process_single_site(url: str, task_id: str, update_callback=None) -> Dict[str, Any]:
+    from .crawler import extract_gambling_financial_data
+    from .database import db_handler
+    from .model import CrawlResult
+    
     start_time = time.time()
     
     try:
@@ -133,6 +134,9 @@ def _process_single_site(url: str, task_id: str, update_callback=None) -> Dict[s
 
 def _process_multiple_sites(urls: list, task_id: str, update_callback=None) -> Dict[str, Any]:
     """Core logic for processing multiple gambling sites - extracted for testing"""
+    from .crawler import extract_gambling_financial_data
+    from .database import db_handler
+    
     start_time = time.time()
     
     try:
