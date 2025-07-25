@@ -46,7 +46,7 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
               onViewChange(value as "network" | "geospatial")
             }
           >
-            <TabsList className="grid w-full grid-cols-2 bg-gray-900 border-gray-700">
+            <TabsList className="grid w-full  bg-gray-900 border-gray-700">
               <TabsTrigger
                 value="network"
                 className="flex items-center gap-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
@@ -54,13 +54,13 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
                 <Network className="h-4 w-4" />
                 Network Graph
               </TabsTrigger>
-              <TabsTrigger
+              {/* <TabsTrigger
                 value="geospatial"
                 className="flex items-center gap-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
               >
                 <Map className="h-4 w-4" />
                 Geospatial Map
-              </TabsTrigger>
+              </TabsTrigger> */}
             </TabsList>
           </Tabs>
         </div>

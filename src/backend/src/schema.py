@@ -1,6 +1,29 @@
 from pydantic import BaseModel, Field, HttpUrl
 from typing import List, Optional, Dict, Any
 
+
+class EntityType(str, Enum):
+    BANK_ACCOUNT = "bank_account"
+    CRYPTO_WALLET = "crypto_wallet" 
+    E_WALLET = "e_wallet"
+    PHONE_NUMBER = "phone_number"
+    QRIS = "qris"
+
+class TransactionDirection(str, Enum):
+    INCOMING = "incoming"
+    OUTGOING = "outgoing"
+
+# Request Models
+class GraphFilters(BaseModel):
+    entity_types: Optional[List[EntityType]] = None
+    banks: Optional[List[str]] = None  # For bank accounts
+    e_wallets: Optional[List[str]] = None  # For e-wallets (OVO, DANA, etc)
+    cryptocurrencies: Optional[List[str]] = None  # For crypto wallets
+    phone_providers: Optional[List[str]] = None  # For phone numbers
+    priority_score_min: Optional[int] = 0
+    priority_score_max: Optional[int] = 100
+    search_query: Optional[str] = None  # Search by identifier
+
 # --- Request models ---
 class TaskRequest(BaseModel):
     data: dict

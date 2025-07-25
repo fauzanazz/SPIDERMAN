@@ -1,8 +1,10 @@
+// src/frontend/src/lib/types/entity.ts - Updated to match backend
 const EntityType = {
   BANK_ACCOUNT: "bank_account",
+  CRYPTO_WALLET: "crypto_wallet",
   E_WALLET: "e_wallet",
-  QRIS: "qris",
   PHONE_NUMBER: "phone_number",
+  QRIS: "qris",
 } as const;
 type EntityType = (typeof EntityType)[keyof typeof EntityType];
 
@@ -22,24 +24,33 @@ type Activity = {
 
 type Entity = {
   id: string;
-  location: string;
-  name: string;
+  identifier: string; // This is the account number, wallet address, etc.
+  location?: string; // Optional now since backend doesn't always have this
+  name?: string; // Optional, can be derived from account_holder
   accountHolder: string;
   type: EntityType;
   specificInformation:
     | BankAccountProvider
     | EWalletProvider
     | PhoneProvider
-    | QRISProvider;
+    | QRISProvider
+    | CryptoProvider;
   priorityScore: number;
   connections: number;
-  lastActivity: string;
-  createdAt: string;
-  phoneNumber: string;
+  lastActivity?: string;
+  createdAt?: string;
+  phoneNumber?: string; // Optional since not all entities have phone numbers
   transactions: number;
   totalAmount: number;
-  linkedEntities: Entity[];
-  recentActivity: Activity[];
+  linkedEntities: Entity[]; // Will be populated from connected_entities
+  recentActivity: Activity[]; // Will need to be derived from transaction history
+
+  // Additional backend fields
+  bank_name?: string;
+  cryptocurrency?: string;
+  wallet_type?: string;
+  phone_provider?: string;
+  additional_info?: Record<string, any>;
 };
 
 const SpecificEntityInformation = {
@@ -59,6 +70,7 @@ const SpecificEntityInformation = {
   [EntityType.E_WALLET]: ["DANA", "Gopay", "LinkAja", "OVO"],
   [EntityType.PHONE_NUMBER]: ["Simpati", "XL"],
   [EntityType.QRIS]: ["QRIS"],
+  [EntityType.CRYPTO_WALLET]: ["Bitcoin", "Ethereum", "USDT", "USDC", "BNB"],
 } as const;
 
 type SpecificEntityInformationType = typeof SpecificEntityInformation;
@@ -70,6 +82,72 @@ type PhoneProvider =
   SpecificEntityInformationType[typeof EntityType.PHONE_NUMBER][number];
 type QRISProvider =
   SpecificEntityInformationType[typeof EntityType.QRIS][number];
+type CryptoProvider =
+  SpecificEntityInformationType[typeof EntityType.CRYPTO_WALLET][number];
+
+// Helper function to convert backend EntityNode to frontend Entity
+export function convertBackendEntityToFrontend(backendEntity: any): Entity {
+  // Determine specificInformation based on entity type
+  let specificInformation:
+    | BankAccountProvider
+    | EWalletProvider
+    | PhoneProvider
+    | QRISProvider
+    | CryptoProvider;
+
+  switch (backendEntity.entity_type) {
+    case "bank_account":
+      specificInformation = (backendEntity.bank_name ||
+        "Unknown") as BankAccountProvider;
+      break;
+    case "e_wallet":
+      specificInformation = (backendEntity.wallet_type ||
+        "Unknown") as EWalletProvider;
+      break;
+    case "phone_number":
+      specificInformation = (backendEntity.phone_provider ||
+        "Unknown") as PhoneProvider;
+      break;
+    case "qris":
+      specificInformation = "QRIS" as QRISProvider;
+      break;
+    case "crypto_wallet":
+      specificInformation = (backendEntity.cryptocurrency ||
+        "Unknown") as CryptoProvider;
+      break;
+    default:
+      specificInformation = "Unknown" as any;
+  }
+
+  return {
+    id: backendEntity.id,
+    identifier: backendEntity.identifier,
+    location: "Unknown", // Default since backend doesn't provide this
+    name: backendEntity.account_holder,
+    accountHolder: backendEntity.account_holder,
+    type: backendEntity.entity_type,
+    specificInformation,
+    priorityScore: backendEntity.priority_score,
+    connections: backendEntity.connections,
+    lastActivity: backendEntity.last_activity,
+    createdAt: backendEntity.created_at,
+    phoneNumber:
+      backendEntity.entity_type === "phone_number"
+        ? backendEntity.identifier
+        : undefined,
+    transactions: backendEntity.transactions,
+    totalAmount: backendEntity.total_amount,
+    linkedEntities: [], // Will be populated separately
+    recentActivity: [], // Will be populated from transaction history
+
+    // Backend-specific fields
+    bank_name: backendEntity.bank_name,
+    cryptocurrency: backendEntity.cryptocurrency,
+    wallet_type: backendEntity.wallet_type,
+    phone_provider: backendEntity.phone_provider,
+    additional_info: backendEntity.additional_info,
+  };
+}
 
 export {
   type Entity,
@@ -80,5 +158,6 @@ export {
   type EWalletProvider,
   type PhoneProvider,
   type QRISProvider,
+  type CryptoProvider,
   type SpecificEntityInformationType,
 };
