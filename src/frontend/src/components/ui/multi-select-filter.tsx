@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -89,13 +89,17 @@ const filterGroups: FilterGroup[] = [
 ];
 
 interface MultiSelectFilterProps {
-  filters: GraphFilters;
-  onFiltersChange: (filters: GraphFilters) => void;
+  filters: GraphFilters; // Current applied filters
+  onFiltersChange: (filters: GraphFilters) => void; // Called when search button is clicked
+  draftFilters: GraphFilters; // Current draft filters (user edits)
+  onDraftFiltersChange: (filters: GraphFilters) => void; // Called when user modifies filters without searching
 }
 
 export function MultiSelectFilter({
   filters,
   onFiltersChange,
+  draftFilters,
+  onDraftFiltersChange,
 }: MultiSelectFilterProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {}
@@ -105,13 +109,13 @@ export function MultiSelectFilter({
   useEffect(() => {
     const initialExpanded: Record<string, boolean> = {};
     filterGroups.forEach((group) => {
-      const filterValue = filters[group.filterKey] as string[] | undefined;
+      const filterValue = draftFilters[group.filterKey] as string[] | undefined;
       if (filterValue && filterValue.length > 0) {
         initialExpanded[group.id] = true;
       }
     });
     setExpandedGroups(initialExpanded);
-  }, []);
+  }, [draftFilters]);
 
   const toggleGroupExpansion = (groupId: string) => {
     setExpandedGroups((prev) => ({
@@ -120,8 +124,12 @@ export function MultiSelectFilter({
     }));
   };
 
+  const updateDraftFilters = (newFilters: GraphFilters) => {
+    onDraftFiltersChange(newFilters);
+  };
+
   const handleParentChange = (group: FilterGroup, checked: boolean) => {
-    const newFilters = { ...filters };
+    const newFilters = { ...draftFilters };
 
     if (checked && group.options) {
       // Select all options in this group
@@ -133,7 +141,7 @@ export function MultiSelectFilter({
       (newFilters[group.filterKey] as string[]) = [];
     }
 
-    onFiltersChange(newFilters);
+    updateDraftFilters(newFilters);
   };
 
   const handleChildChange = (
@@ -141,8 +149,8 @@ export function MultiSelectFilter({
     optionId: string,
     checked: boolean
   ) => {
-    const newFilters = { ...filters };
-    const currentSelections = (filters[group.filterKey] as string[]) || [];
+    const newFilters = { ...draftFilters };
+    const currentSelections = (draftFilters[group.filterKey] as string[]) || [];
 
     if (checked) {
       // Add option to selections
@@ -157,12 +165,12 @@ export function MultiSelectFilter({
       );
     }
 
-    onFiltersChange(newFilters);
+    updateDraftFilters(newFilters);
   };
 
   const isParentChecked = (group: FilterGroup) => {
     if (!group.options) return false;
-    const selectedOptions = (filters[group.filterKey] as string[]) || [];
+    const selectedOptions = (draftFilters[group.filterKey] as string[]) || [];
     return (
       group.options.length > 0 &&
       selectedOptions.length === group.options.length
@@ -171,7 +179,7 @@ export function MultiSelectFilter({
 
   const isParentIndeterminate = (group: FilterGroup) => {
     if (!group.options) return false;
-    const selectedOptions = (filters[group.filterKey] as string[]) || [];
+    const selectedOptions = (draftFilters[group.filterKey] as string[]) || [];
     return (
       selectedOptions.length > 0 &&
       selectedOptions.length < group.options.length
@@ -179,7 +187,7 @@ export function MultiSelectFilter({
   };
 
   const getSelectedCount = (group: FilterGroup) => {
-    const selectedOptions = (filters[group.filterKey] as string[]) || [];
+    const selectedOptions = (draftFilters[group.filterKey] as string[]) || [];
     return selectedOptions.length;
   };
 
@@ -194,19 +202,29 @@ export function MultiSelectFilter({
       priority_score_max: undefined,
       search_query: undefined,
     };
-    onFiltersChange(clearedFilters);
+    updateDraftFilters(clearedFilters);
   };
 
   const hasActiveFilters = () => {
     return (
       filterGroups.some((group) => {
-        const filterValue = filters[group.filterKey] as string[] | undefined;
+        const filterValue = draftFilters[group.filterKey] as
+          | string[]
+          | undefined;
         return filterValue && filterValue.length > 0;
       }) ||
-      filters.priority_score_min !== undefined ||
-      filters.priority_score_max !== undefined ||
-      filters.search_query
+      draftFilters.priority_score_min !== undefined ||
+      draftFilters.priority_score_max !== undefined ||
+      draftFilters.search_query
     );
+  };
+
+  const hasUnappliedChanges = () => {
+    return JSON.stringify(filters) !== JSON.stringify(draftFilters);
+  };
+
+  const handleSearch = () => {
+    onFiltersChange(draftFilters);
   };
 
   return (
@@ -284,7 +302,7 @@ export function MultiSelectFilter({
                     <div className="space-y-2 pl-6">
                       {group.options.map((option) => {
                         const selectedOptions =
-                          (filters[group.filterKey] as string[]) || [];
+                          (draftFilters[group.filterKey] as string[]) || [];
                         return (
                           <div
                             key={option.id}
@@ -323,10 +341,21 @@ export function MultiSelectFilter({
       {/* Filter actions */}
       <div className="flex gap-2 pt-4">
         <Button
+          onClick={handleSearch}
+          disabled={!hasActiveFilters() && !hasUnappliedChanges()}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+        >
+          <Search className="mr-2 h-4 w-4" />
+          Search
+          {hasUnappliedChanges() && (
+            <span className="ml-1 text-xs">(Changes)</span>
+          )}
+        </Button>
+        <Button
           variant="outline"
           onClick={clearAllFilters}
           disabled={!hasActiveFilters()}
-          className="flex-1 border-gray-600 text-gray-400 hover:bg-gray-800 bg-transparent disabled:opacity-50"
+          className="border-gray-600 text-gray-400 hover:bg-gray-800 bg-transparent disabled:opacity-50"
         >
           Clear All
         </Button>

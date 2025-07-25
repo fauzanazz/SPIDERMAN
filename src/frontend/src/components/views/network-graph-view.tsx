@@ -1,22 +1,20 @@
-// src/frontend/src/components/views/network-graph-view.tsx - Updated for backend integration
+// src/frontend/src/components/views/network-graph-view.tsx - Updated with flying search bar
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as d3 from "d3";
 import {
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Download,
   RefreshCw,
   Network,
   Loader2,
   AlertTriangle,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 import {
   graphApi,
   type GraphFilters,
@@ -26,10 +24,6 @@ import {
   convertBackendEntityToFrontend,
   type Entity,
   type BackendEntity,
-  type BankAccountProvider,
-  type CryptoProvider,
-  type EWalletProvider,
-  type PhoneProvider,
 } from "@/lib/types/entity";
 
 interface NetworkGraphViewProps {
@@ -37,14 +31,17 @@ interface NetworkGraphViewProps {
   onEntitySelect: (entity: Entity) => void;
   selectedEntity: Entity | null;
   onRefreshData?: () => void;
-  centerNodeId?: string; // Optional: if provided, show node-centered graph
-  onReturnToFullGraph?: () => void; // Callback to return to full graph view
+  onFiltersChange: (filters: GraphFilters) => void;
+  currentMode: "default" | "selection";
+  selectedEntities: Entity[];
+  onEntitiesSelect: (entities: Entity[]) => void;
 }
 
 interface NetworkNode extends d3.SimulationNodeDatum {
   id: string;
   entity: Entity;
-  cluster?: string; // Website cluster this node belongs to
+  cluster?: string;
+  selected?: boolean;
 }
 
 interface NetworkEdge {
@@ -54,146 +51,31 @@ interface NetworkEdge {
   type: "transaction" | "same_site" | "connected";
 }
 
-// Define proper types for backend graph data
-interface BackendGraphData {
-  clusters?: Array<{
-    website_name: string;
-    entities: EntityNode[];
-  }>;
+interface GraphCluster {
+  website_name: string;
+  entities: EntityNode[];
+}
+
+interface GraphData {
+  clusters?: GraphCluster[];
   standalone_entities?: EntityNode[];
   total_transactions?: number;
 }
 
-// Convert backend data to D3 network format
-const convertToNetworkData = (graphData: BackendGraphData) => {
-  const nodes: NetworkNode[] = [];
-  const edges: NetworkEdge[] = [];
-  const nodeMap = new Map<string, NetworkNode>();
-
-  // Helper function to convert EntityNode to BackendEntity format
-  const entityNodeToBackendEntity = (
-    entityNode: EntityNode
-  ): BackendEntity => {
-    // Filter additional_info to only include string or string[] values
-    let filteredAdditionalInfo: Record<string, string | string[]> | undefined = undefined;
-    if (entityNode.additional_info) {
-      filteredAdditionalInfo = Object.fromEntries(
-        Object.entries(entityNode.additional_info).filter(
-          ([, value]) =>
-            typeof value === "string" ||
-            (Array.isArray(value) && value.every((v) => typeof v === "string"))
-        )
-      );
-    }
-    return {
-      ...entityNode,
-      entity_type: entityNode.entity_type,
-      account_holder: entityNode.account_holder,
-      connected_entities: [], // EntityNode doesn't have this, so we provide empty array
-      bank_name: entityNode.bank_name as BankAccountProvider,
-      cryptocurrency: entityNode.cryptocurrency as CryptoProvider,
-      wallet_type: entityNode.wallet_type as EWalletProvider,
-      phone_provider: entityNode.phone_provider as PhoneProvider,
-      additional_info: filteredAdditionalInfo,
-    };
-  };
-
-  // Process clustered entities (from gambling sites)
-  graphData.clusters?.forEach((cluster) => {
-    cluster.entities.forEach((backendEntity: EntityNode) => {
-      const entity = convertBackendEntityToFrontend(
-        entityNodeToBackendEntity(backendEntity)
-      );
-      const node: NetworkNode = {
-        id: backendEntity.id,
-        entity,
-        cluster: cluster.website_name,
-      };
-      nodes.push(node);
-      nodeMap.set(backendEntity.id, node);
-    });
-
-    // Create edges between entities in the same cluster (gambling site)
-    if (cluster.entities.length > 1) {
-      for (let i = 0; i < cluster.entities.length; i++) {
-        for (let j = i + 1; j < cluster.entities.length; j++) {
-          edges.push({
-            source: cluster.entities[i].id,
-            target: cluster.entities[j].id,
-            strength: 0.3,
-            type: "same_site",
-          });
-        }
-      }
-    }
-  });
-
-  // Process standalone entities
-  graphData.standalone_entities?.forEach((backendEntity: EntityNode) => {
-    const entity = convertBackendEntityToFrontend(
-      entityNodeToBackendEntity(backendEntity)
-    );
-    const node: NetworkNode = {
-      id: backendEntity.id,
-      entity,
-      cluster: "standalone",
-    };
-    nodes.push(node);
-    nodeMap.set(backendEntity.id, node);
-  });
-
-  // Create additional edges based on connections (this would be enhanced with actual transaction data)
-  nodes.forEach((node) => {
-    if (node.entity.connections > 0) {
-      // For now, create some connections based on priority scores and entity types
-      const potentialConnections = nodes.filter(
-        (otherNode) =>
-          otherNode.id !== node.id &&
-          otherNode.entity.type === node.entity.type &&
-          Math.abs(otherNode.entity.priorityScore - node.entity.priorityScore) <
-            20
-      );
-
-      // Add a few connections randomly
-      const numConnections = Math.min(
-        Math.floor(Math.random() * 3) + 1,
-        potentialConnections.length
-      );
-
-      for (let i = 0; i < numConnections; i++) {
-        const target =
-          potentialConnections[
-            Math.floor(Math.random() * potentialConnections.length)
-          ];
-        if (
-          target &&
-          !edges.some(
-            (e) =>
-              (e.source === node.id && e.target === target.id) ||
-              (e.source === target.id && e.target === node.id)
-          )
-        ) {
-          edges.push({
-            source: node.id,
-            target: target.id,
-            strength: 0.6,
-            type: "connected",
-          });
-        }
-      }
-    }
-  });
-
-  return { nodes, edges };
-};
+interface MouseEvent {
+  target: EventTarget | null;
+  currentTarget: EventTarget | null;
+}
 
 export function NetworkGraphView({
   filters,
   onEntitySelect,
   selectedEntity,
   onRefreshData,
-  centerNodeId,
-  onReturnToFullGraph,
+  onFiltersChange,
+  currentMode,
+  selectedEntities,
+  onEntitiesSelect,
 }: NetworkGraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkEdge> | null>(
@@ -217,8 +99,9 @@ export function NetworkGraphView({
     edges: 0,
     clusters: 0,
   });
+  const [searchInput, setSearchInput] = useState(filters.search_query || "");
 
-  // Fetch graph data using React Query - either full graph or node-centered
+  // Fetch graph data using React Query
   const {
     data: graphData,
     isLoading,
@@ -226,16 +109,175 @@ export function NetworkGraphView({
     isError,
     refetch,
   } = useQuery({
-    queryKey: centerNodeId
-      ? ["node-centered-graph", centerNodeId, filters]
-      : ["graph-data", filters],
-    queryFn: () =>
-      centerNodeId
-        ? graphApi.getNodeCenteredGraph(centerNodeId, filters)
-        : graphApi.getWholeGraph(filters),
-    staleTime: 30000, // 30 seconds
+    queryKey: ["graph-data", filters],
+    queryFn: () => graphApi.getWholeGraph(filters),
+    staleTime: 30000,
     refetchOnWindowFocus: false,
   });
+
+  // Handle search submit
+  const handleSearchSubmit = () => {
+    onFiltersChange({
+      ...filters,
+      search_query: searchInput.trim() || undefined,
+    });
+  };
+
+  // Handle node selection in different modes
+  const handleNodeClick = useCallback(
+    (_event: MouseEvent, node: NetworkNode) => {
+      if (currentMode === "selection") {
+        // Selection mode: add/remove from selected entities
+        const isSelected = selectedEntities.some(
+          (e) => e.id === node.entity.id
+        );
+        if (isSelected) {
+          // Remove from selection
+          onEntitiesSelect(
+            selectedEntities.filter((e) => e.id !== node.entity.id)
+          );
+        } else {
+          // Add to selection
+          onEntitiesSelect([...selectedEntities, node.entity]);
+        }
+      } else {
+        // Default mode: select single entity
+        onEntitySelect(node.entity);
+      }
+    },
+    [currentMode, selectedEntities, onEntitiesSelect, onEntitySelect]
+  );
+
+  // Check if node is selected
+  const isNodeSelected = useCallback(
+    (node: NetworkNode) => {
+      if (currentMode === "selection") {
+        return selectedEntities.some((e) => e.id === node.entity.id);
+      } else {
+        return selectedEntity?.id === node.entity.id;
+      }
+    },
+    [currentMode, selectedEntities, selectedEntity]
+  );
+
+  // Convert backend data to D3 network format
+  const convertToNetworkData = useCallback(
+    (graphData: GraphData) => {
+      const nodes: NetworkNode[] = [];
+      const edges: NetworkEdge[] = [];
+      const nodeMap = new Map<string, NetworkNode>();
+
+      // Process clustered entities (from gambling sites)
+      graphData.clusters?.forEach((cluster: GraphCluster) => {
+        cluster.entities.forEach((backendEntity: EntityNode) => {
+          // Convert EntityNode to BackendEntity format for the conversion function
+          const backendEntityWithConnections: EntityNode & {
+            connected_entities: Entity[];
+          } = {
+            ...backendEntity,
+            connected_entities: [], // EntityNode doesn't have this field, so we provide empty array
+          };
+          const entity = convertBackendEntityToFrontend(
+            backendEntityWithConnections as BackendEntity
+          );
+          const node: NetworkNode = {
+            id: backendEntity.id,
+            entity,
+            cluster: cluster.website_name,
+            selected: isNodeSelected({
+              id: backendEntity.id,
+              entity,
+            } as NetworkNode),
+          };
+          nodes.push(node);
+          nodeMap.set(backendEntity.id, node);
+        });
+
+        // Create edges between entities in the same cluster
+        if (cluster.entities.length > 1) {
+          for (let i = 0; i < cluster.entities.length; i++) {
+            for (let j = i + 1; j < cluster.entities.length; j++) {
+              edges.push({
+                source: cluster.entities[i].id,
+                target: cluster.entities[j].id,
+                strength: 0.3,
+                type: "same_site",
+              });
+            }
+          }
+        }
+      });
+
+      // Process standalone entities
+      graphData.standalone_entities?.forEach((backendEntity: EntityNode) => {
+        // Convert EntityNode to BackendEntity format for the conversion function
+        const backendEntityWithConnections: EntityNode & {
+          connected_entities: Entity[];
+        } = {
+          ...backendEntity,
+          connected_entities: [], // EntityNode doesn't have this field, so we provide empty array
+        };
+        const entity = convertBackendEntityToFrontend(
+          backendEntityWithConnections as BackendEntity
+        );
+        const node: NetworkNode = {
+          id: backendEntity.id,
+          entity,
+          cluster: "standalone",
+          selected: isNodeSelected({
+            id: backendEntity.id,
+            entity,
+          } as NetworkNode),
+        };
+        nodes.push(node);
+        nodeMap.set(backendEntity.id, node);
+      });
+
+      // Create additional edges based on connections
+      nodes.forEach((node) => {
+        if (node.entity.connections > 0) {
+          const potentialConnections = nodes.filter(
+            (otherNode) =>
+              otherNode.id !== node.id &&
+              otherNode.entity.type === node.entity.type &&
+              Math.abs(
+                otherNode.entity.priorityScore - node.entity.priorityScore
+              ) < 20
+          );
+
+          const numConnections = Math.min(
+            Math.floor(Math.random() * 3) + 1,
+            potentialConnections.length
+          );
+
+          for (let i = 0; i < numConnections; i++) {
+            const target =
+              potentialConnections[
+                Math.floor(Math.random() * potentialConnections.length)
+              ];
+            if (
+              target &&
+              !edges.some(
+                (e) =>
+                  (e.source === node.id && e.target === target.id) ||
+                  (e.source === target.id && e.target === node.id)
+              )
+            ) {
+              edges.push({
+                source: node.id,
+                target: target.id,
+                strength: 0.6,
+                type: "connected",
+              });
+            }
+          }
+        }
+      });
+
+      return { nodes, edges };
+    },
+    [isNodeSelected]
+  );
 
   // Handle refresh
   const handleRefresh = () => {
@@ -287,8 +329,7 @@ export function NetworkGraphView({
           .forceLink(edges)
           .id((d) => (d as NetworkNode).id)
           .distance((d) => {
-            const edge = d as NetworkEdge;
-            switch (edge.type) {
+            switch (d.type) {
               case "same_site":
                 return 80;
               case "transaction":
@@ -299,7 +340,7 @@ export function NetworkGraphView({
                 return 100;
             }
           })
-          .strength((d) => (d as NetworkEdge).strength)
+          .strength((d: NetworkEdge) => d.strength)
       )
       .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2))
@@ -363,13 +404,26 @@ export function NetworkGraphView({
       .append("circle")
       .attr("r", (d: NetworkNode) => getNodeSize(d.entity.connections))
       .attr("fill", (d: NetworkNode) => getEntityColor(d.entity))
-      .attr("stroke", "#ffffff")
-      .attr("stroke-width", 2)
+      .attr("stroke", (d: NetworkNode) => {
+        if (currentMode === "selection" && isNodeSelected(d)) {
+          return "#10b981"; // Green for selected in selection mode
+        } else if (
+          currentMode === "default" &&
+          selectedEntity?.id === d.entity.id
+        ) {
+          return "#dc2626"; // Red for selected in default mode
+        }
+        return "#ffffff";
+      })
+      .attr("stroke-width", (d: NetworkNode) => {
+        if (isNodeSelected(d)) {
+          return 4;
+        }
+        return 2;
+      })
       .on("mouseover", (_event, d: NetworkNode) => setHoveredNode(d))
       .on("mouseout", () => setHoveredNode(null))
-      .on("click", (_event, d: NetworkNode) => {
-        onEntitySelect(d.entity);
-      });
+      .on("click", handleNodeClick);
 
     // Add text labels
     node
@@ -395,6 +449,21 @@ export function NetworkGraphView({
       .attr("stroke-width", 1)
       .attr("pointer-events", "none");
 
+    // Add selection indicator for selection mode
+    if (currentMode === "selection") {
+      node
+        .append("circle")
+        .attr("r", (d: NetworkNode) => getNodeSize(d.entity.connections) + 8)
+        .attr("fill", "none")
+        .attr("stroke", (d: NetworkNode) =>
+          isNodeSelected(d) ? "#10b981" : "transparent"
+        )
+        .attr("stroke-width", 3)
+        .attr("stroke-dasharray", "5,5")
+        .attr("pointer-events", "none")
+        .style("opacity", (d: NetworkNode) => (isNodeSelected(d) ? 0.8 : 0));
+    }
+
     nodesRef.current = nodeCircles;
     linksRef.current = link;
     simulationRef.current = simulation;
@@ -402,35 +471,28 @@ export function NetworkGraphView({
     // Update positions on simulation tick
     simulation.on("tick", () => {
       link
-        .attr("x1", (d) => (d.source as NetworkNode).x || 0)
-        .attr("y1", (d) => (d.source as NetworkNode).y || 0)
-        .attr("x2", (d) => (d.target as NetworkNode).x || 0)
-        .attr("y2", (d) => (d.target as NetworkNode).y || 0);
+        .attr("x1", (d: NetworkEdge) => (d.source as NetworkNode).x!)
+        .attr("y1", (d: NetworkEdge) => (d.source as NetworkNode).y!)
+        .attr("x2", (d: NetworkEdge) => (d.target as NetworkNode).x!)
+        .attr("y2", (d: NetworkEdge) => (d.target as NetworkNode).y!);
 
-      node.attr(
-        "transform",
-        (d) =>
-          `translate(${(d as NetworkNode).x || 0},${(d as NetworkNode).y || 0})`
-      );
+      node.attr("transform", (d: NetworkNode) => `translate(${d.x},${d.y})`);
     });
 
     return () => {
       simulation.stop();
     };
-  }, [graphData, onEntitySelect, isLoading]);
-
-  // Update selected node styling
-  useEffect(() => {
-    if (!nodesRef.current) return;
-
-    nodesRef.current
-      .attr("stroke", (d: NetworkNode) =>
-        selectedEntity?.id === d.entity.id ? "#dc2626" : "#ffffff"
-      )
-      .attr("stroke-width", (d: NetworkNode) =>
-        selectedEntity?.id === d.entity.id ? 4 : 2
-      );
-  }, [selectedEntity]);
+  }, [
+    graphData,
+    onEntitySelect,
+    currentMode,
+    selectedEntities,
+    selectedEntity,
+    convertToNetworkData,
+    handleNodeClick,
+    isLoading,
+    isNodeSelected,
+  ]);
 
   // Helper functions
   const getNodeSize = (connections: number) => {
@@ -439,20 +501,19 @@ export function NetworkGraphView({
 
   const getEntityColor = (entity: Entity) => {
     const typeColors: Record<string, string> = {
-      bank_account: "#1e3a8a", // blue-800
-      e_wallet: "#7c3aed", // violet-600
-      crypto_wallet: "#f59e0b", // amber-500
-      phone_number: "#8b5cf6", // violet-500
-      qris: "#f59e0b", // amber-500
-      others: "#6b7280", // gray-500
+      bank_account: "#1e3a8a",
+      e_wallet: "#7c3aed",
+      crypto_wallet: "#f59e0b",
+      phone_number: "#8b5cf6",
+      qris: "#f59e0b",
     };
     return typeColors[entity.type] || "#6b7280";
   };
 
   const getPriorityColor = (priorityScore: number) => {
-    if (priorityScore >= 80) return "#dc2626"; // red-600
-    if (priorityScore >= 60) return "#ea580c"; // orange-600
-    return "#16a34a"; // green-600
+    if (priorityScore >= 80) return "#dc2626";
+    if (priorityScore >= 60) return "#ea580c";
+    return "#16a34a";
   };
 
   const getEntityLabel = (entity: Entity) => {
@@ -496,89 +557,55 @@ export function NetworkGraphView({
 
   return (
     <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
-      {/* Graph Controls */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 flex gap-2">
-        {/* Return to Full Graph Button - only show in node-centered mode */}
-        {centerNodeId && onReturnToFullGraph && (
-          <Card className="p-2 bg-blue-900/90 border-blue-700 backdrop-blur">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onReturnToFullGraph}
-              className="text-blue-300 hover:text-white hover:bg-blue-800 px-3"
-            >
-              <Network className="h-4 w-4 mr-2" />
-              Back to Full Graph
-            </Button>
-          </Card>
-        )}
-
-        <Card className="p-2 bg-black/90 border-gray-700 backdrop-blur">
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white hover:bg-gray-800"
-              onClick={() => {
-                if (simulationRef.current) {
-                  simulationRef.current.alpha(1).restart();
-                }
-              }}
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white hover:bg-gray-800"
-              onClick={() => {
-                if (simulationRef.current) {
-                  simulationRef.current.alpha(0).stop();
-                }
-              }}
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white hover:bg-gray-800"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-50"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
+      {/* Flying Search Bar - Centered at top */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 flex gap-2">
+        <Card className="p-3 bg-black/90 border-gray-700 backdrop-blur min-w-96">
+          <div className="flex items-center space-x-3">
+            <div className="flex-1 flex space-x-2">
+              <Input
+                placeholder="Search entities by account number, wallet address, phone..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSearchSubmit();
+                  }
+                }}
+                className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500"
+              />
+              <Button
+                onClick={handleSearchSubmit}
+                className="bg-gray-700 hover:bg-gray-600 text-white"
+                size="sm"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={handleRefresh}
+                className="bg-gray-700 hover:bg-gray-600 text-white"
+                size="sm"
+              >
                 <RefreshCw className="h-4 w-4" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white hover:bg-gray-800"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
+              </Button>
+            </div>
+            {filters.search_query && (
+              <div className="text-xs text-blue-400 whitespace-nowrap">
+                Searching: "{filters.search_query}"
+              </div>
+            )}
           </div>
         </Card>
       </div>
 
-      {/* Node-Centered Mode Indicator */}
-      {centerNodeId && selectedEntity && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
-          <Card className="p-3 bg-amber-900/90 border-amber-700 backdrop-blur">
-            <div className="text-sm text-center text-amber-200">
-              <div className="font-medium">Node-Centered View</div>
-              <div className="text-xs">
-                Showing network around: {selectedEntity.identifier}
-              </div>
+      {/* Mode Indicator */}
+      {currentMode === "selection" && (
+        <div className="absolute top-4 right-4 z-20">
+          <Card className="p-3 bg-green-900/90 border-green-700 backdrop-blur">
+            <div className="text-sm text-green-300 font-medium">
+              Selection Mode Active
+            </div>
+            <div className="text-xs text-green-400">
+              Click nodes to select for batch reporting
             </div>
           </Card>
         </div>
@@ -607,6 +634,14 @@ export function NetworkGraphView({
                   {isLoading ? "..." : networkStats.clusters}
                 </span>
               </div>
+              {currentMode === "selection" && (
+                <div>
+                  <span className="text-gray-400">Selected:</span>
+                  <span className="font-medium text-green-400 ml-2">
+                    {selectedEntities.length}
+                  </span>
+                </div>
+              )}
             </div>
             {graphData && (
               <div className="text-xs text-gray-500">
@@ -630,7 +665,7 @@ export function NetworkGraphView({
         </div>
       )}
 
-      {/* Main Graph Area - D3.js will render here */}
+      {/* Main Graph Area */}
       <div className="h-full w-full overflow-hidden">
         <svg
           ref={svgRef}
@@ -674,6 +709,13 @@ export function NetworkGraphView({
                   hoveredNode.cluster !== "standalone" && (
                     <div>Cluster: {hoveredNode.cluster}</div>
                   )}
+                {currentMode === "selection" && (
+                  <div className="text-green-400 text-xs mt-2">
+                    {isNodeSelected(hoveredNode)
+                      ? "✓ Selected"
+                      : "Click to select"}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -728,6 +770,23 @@ export function NetworkGraphView({
                 </div>
               </div>
             </div>
+
+            {currentMode === "selection" && (
+              <div className="border-t border-gray-600 pt-2 mt-3">
+                <div className="font-medium mb-2 text-gray-400">
+                  Selection Mode
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-4 h-4 rounded-full border-2 border-green-600"
+                      style={{ borderStyle: "dashed" }}
+                    ></div>
+                    <span className="text-xs text-white">Selected Node</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="border-t border-gray-600 pt-2 mt-3">
               <div className="font-medium mb-2 text-gray-400">

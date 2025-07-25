@@ -1,17 +1,17 @@
 // src/frontend/src/components/bars/right-sidebar.tsx - Updated for backend integration
 "use client";
-
 import { useState } from "react";
 import {
-  Search,
   Filter,
-  FileText,
   Monitor,
-  TrendingUp,
-  AlertTriangle,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Users,
+  MousePointer,
+  Trash2,
+  X,
+  Download,
 } from "lucide-react";
 import {
   Card,
@@ -40,29 +40,35 @@ import type { Entity } from "@/lib/types/entity";
 interface RightSidebarProps {
   filters: GraphFilters;
   onFiltersChange: (filters: GraphFilters) => void;
+  draftFilters: GraphFilters;
+  onDraftFiltersChange: (filters: GraphFilters) => void;
   selectedEntity: Entity | null;
   collapsed: boolean;
   onToggleCollapse: () => void;
   onRefreshData?: () => void;
+  // New props for mode selection and batch reporting
+  currentMode: "default" | "selection";
+  onModeChange: (mode: "default" | "selection") => void;
+  selectedEntities: Entity[];
+  onEntitiesSelect: (entities: Entity[]) => void;
+  onGenerateBatchReport: (entities: Entity[]) => Promise<void>;
 }
 
 export function RightSidebar({
   filters,
   onFiltersChange,
-  selectedEntity,
+  draftFilters,
+  onDraftFiltersChange,
   collapsed,
   onToggleCollapse,
   onRefreshData,
+  currentMode,
+  onModeChange,
+  selectedEntities,
+  onEntitiesSelect,
+  onGenerateBatchReport,
 }: RightSidebarProps) {
-  const [activeTab, setActiveTab] = useState("search");
-  const [searchInput, setSearchInput] = useState(filters.search_query || "");
-
-  const handleSearchSubmit = () => {
-    onFiltersChange({
-      ...filters,
-      search_query: searchInput.trim() || undefined,
-    });
-  };
+  const [activeTab, setActiveTab] = useState("mode");
 
   const handlePriorityLevelChange = (value: string) => {
     let priorityMin: number | undefined;
@@ -109,9 +115,7 @@ export function RightSidebar({
     return "all";
   };
 
-
   const clearAllFilters = () => {
-    setSearchInput("");
     onFiltersChange({
       entity_types: [],
       banks: [],
@@ -139,7 +143,7 @@ export function RightSidebar({
 
   return (
     <div
-      className={`absolute right-4 top-4 bottom-4 z-20 transition-all duration-300 ${collapsed ? "w-12" : "w-80"}`}
+      className={`absolute right-4 top-4 bottom-4 z-20 transition-all duration-300 ${collapsed ? "w-12" : "w-100"}`}
     >
       <div className="h-full flex">
         {/* Toggle Button */}
@@ -168,13 +172,13 @@ export function RightSidebar({
                 onValueChange={setActiveTab}
                 className="flex flex-col h-full"
               >
-                <div className="p-4 border-b border-gray-700">
-                  <TabsList className="grid w-full grid-cols-4 bg-gray-900 border-gray-700">
+                <div className="p-4 border-b border-gray-700  h-[500px]">
+                  <TabsList className="grid w-full grid-cols-3 bg-gray-900 border-gray-700">
                     <TabsTrigger
-                      value="search"
+                      value="mode"
                       className="p-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
                     >
-                      <Search className="h-4 w-4" />
+                      <MousePointer className="h-4 w-4" />
                     </TabsTrigger>
                     <TabsTrigger
                       value="filters"
@@ -188,110 +192,151 @@ export function RightSidebar({
                     >
                       <Monitor className="h-4 w-4" />
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="reports"
-                      className="p-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
-                    >
-                      <FileText className="h-4 w-4" />
-                    </TabsTrigger>
                   </TabsList>
 
-                  <ScrollArea className="flex-1">
-                    <div className="p-4">
-                      <TabsContent value="search" className="space-y-4 mt-0">
+                  <ScrollArea >
+                    <div className="p-4 ">
+                      <TabsContent value="mode" className="space-y-4 mt-0">
+                        {/* Mode Selector */}
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400">
-                              Entity Search
+                              Interaction Mode
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-3">
                             <div className="space-y-2">
-                              <Label htmlFor="search" className="text-gray-400">
-                                Search Entity
+                              <Label className="text-gray-400">
+                                Select Mode
                               </Label>
-                              <div className="flex space-x-2">
-                                <Input
-                                  id="search"
-                                  placeholder="Enter account number, wallet address, phone..."
-                                  value={searchInput}
-                                  onChange={(e) =>
-                                    setSearchInput(e.target.value)
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      handleSearchSubmit();
-                                    }
-                                  }}
-                                  className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500"
-                                />
+                              <div className="grid grid-cols-2 gap-2">
                                 <Button
-                                  onClick={handleSearchSubmit}
-                                  className="bg-gray-700 hover:bg-gray-600 text-white"
+                                  variant={
+                                    currentMode === "default"
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={() => onModeChange("default")}
+                                  className={`flex items-center gap-2 ${
+                                    currentMode === "default"
+                                      ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                      : "bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-600"
+                                  }`}
                                   size="sm"
                                 >
-                                  <Search className="h-4 w-4" />
+                                  <MousePointer className="h-4 w-4" />
+                                  Default
+                                </Button>
+                                <Button
+                                  variant={
+                                    currentMode === "selection"
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={() => onModeChange("selection")}
+                                  className={`flex items-center gap-2 ${
+                                    currentMode === "selection"
+                                      ? "bg-green-600 hover:bg-green-700 text-white"
+                                      : "bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-600"
+                                  }`}
+                                  size="sm"
+                                >
+                                  <Users className="h-4 w-4" />
+                                  Selection
                                 </Button>
                               </div>
-                              {filters.search_query && (
-                                <div className="text-xs text-blue-400">
-                                  Searching for: "{filters.search_query}"
+                              {currentMode === "default" && (
+                                <div className="text-xs text-gray-500">
+                                  Click nodes to view details
+                                </div>
+                              )}
+                              {currentMode === "selection" && (
+                                <div className="text-xs text-gray-500">
+                                  Click nodes to select for batch operations
                                 </div>
                               )}
                             </div>
                           </CardContent>
                         </Card>
 
-                        {/* <Card className="bg-gray-900/50 border-gray-700">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm text-gray-400">
-                              Recent Searches
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2">
-                              {recentSearches.map((search, index) => (
-                                <Button
-                                  key={index}
-                                  variant="ghost"
-                                  className="w-full justify-start text-sm h-8 text-white hover:bg-gray-800 font-mono"
-                                  onClick={() =>
-                                    handleRecentSearchClick(search)
-                                  }
-                                >
-                                  {search}
-                                </Button>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="bg-gray-900/50 border-gray-700">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm text-gray-400">
-                              Quick Stats
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
-                              {quickStats.map((stat, index) => (
-                                <div
-                                  key={index}
-                                  className="flex items-center justify-between"
-                                >
-                                  <span className="text-sm text-gray-400">
-                                    {stat.label}
-                                  </span>
-                                  <span
-                                    className={`text-sm font-medium ${stat.color}`}
+                        {/* Selected Entities */}
+                        {currentMode === "selection" && (
+                          <Card className="bg-gray-900/50 border-gray-700">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm text-gray-400 flex items-center justify-between">
+                                Selected Entities ({selectedEntities.length})
+                                {selectedEntities.length > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => onEntitiesSelect([])}
+                                    className="text-red-400 hover:text-red-300 hover:bg-red-800/20 h-6 w-6 p-0"
                                   >
-                                    {stat.value}
-                                  </span>
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              {selectedEntities.length === 0 ? (
+                                <div className="text-xs text-gray-500 text-center py-4">
+                                  No entities selected. Click nodes in the graph
+                                  to select them.
                                 </div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card> */}
+                              ) : (
+                                <>
+                                  <ScrollArea className="max-h-48">
+                                    <div className="space-y-2">
+                                      {selectedEntities.map((entity) => (
+                                        <div
+                                          key={entity.id}
+                                          className="flex items-center justify-between p-2 bg-gray-800/50 rounded text-sm"
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <div className="font-mono text-xs text-white truncate">
+                                              {entity.identifier}
+                                            </div>
+                                            <div className="text-xs text-gray-400">
+                                              {entity.type.replace("_", " ")} •{" "}
+                                              {entity.accountHolder}
+                                            </div>
+                                          </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() =>
+                                              onEntitiesSelect(
+                                                selectedEntities.filter(
+                                                  (e) => e.id !== entity.id
+                                                )
+                                              )
+                                            }
+                                            className="text-red-400 hover:text-red-300 hover:bg-red-800/20 h-6 w-6 p-0 ml-2"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </ScrollArea>
+
+                                  {/* Batch Report Button */}
+                                  <Button
+                                    onClick={() =>
+                                      onGenerateBatchReport(selectedEntities)
+                                    }
+                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                                    size="sm"
+                                  >
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Generate Batch Report (
+                                    {selectedEntities.length})
+                                  </Button>
+                                </>
+                              )}
+                            </CardContent>
+                          </Card>
+                        )}
                       </TabsContent>
 
                       <TabsContent value="filters" className="space-y-4 mt-0">
@@ -332,6 +377,8 @@ export function RightSidebar({
                             <MultiSelectFilter
                               filters={filters}
                               onFiltersChange={onFiltersChange}
+                              draftFilters={draftFilters}
+                              onDraftFiltersChange={onDraftFiltersChange}
                             />
                           </CardContent>
                         </Card>
@@ -495,7 +542,7 @@ export function RightSidebar({
                         </Card>
                       </TabsContent>
 
-                      <TabsContent value="reports" className="space-y-4 mt-0">
+                      {/* <TabsContent value="reports" className="space-y-4 mt-0">
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400">
@@ -564,7 +611,7 @@ export function RightSidebar({
                             </div>
                           </CardContent>
                         </Card>
-                      </TabsContent>
+                      </TabsContent> */}
                     </div>
                   </ScrollArea>
                 </div>
