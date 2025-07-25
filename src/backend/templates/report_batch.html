@@ -1,0 +1,36 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Report</title>
+    <meta name="description" content="Report example">
+  </head>
+
+  <body>
+    <article id="cover">
+      <h1>Surat Permintaan Penghentian Sementara Transaksi Keuangan </h1>
+      
+      <address  style="font-weight: bold; font-size: 1.2em;">
+        {{ nama_bank }}<br>
+      </address>
+      
+    </article>
+    
+    <article>
+        <h2> Daftar Akun </h2>
+         {% for account in accounts %}
+            <div>
+                <li>
+                  <strong>Nomor Rekening:</strong> {{ account.nomor_rekening }}<br>
+                  <strong>Pemilik Rekening:</strong> {{ account.pemilik_rekening }}<br>
+                </li>
+                <div style="text-align: center; margin: 20px 0; padding: 10px;">
+                  <img src="{{ account.oss_key }}" style="max-width: 100%; height: auto; max-height: 400px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                </div>
+            </div>
+           
+          {% endfor %}
+       
+    </article>
+
+  </body>
+</html>

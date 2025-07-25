@@ -11,12 +11,16 @@ class SitusJudiRequest(BaseModel):
 class MultipleSitusRequest(BaseModel):
     urls: List[HttpUrl] = Field(..., description="Daftar URL situs judi online yang akan dianalisis")
 
-class ReportRequest(BaseModel):
+class DaftarAkunRequest(BaseModel):
     nomor_rekening: str = Field(..., description="Nomor rekening untuk laporan")
     pemilik_rekening: str = Field(..., description="Nama pemilik rekening")
-    nama_bank: str = Field(..., description="Nama bank")
     oss_key: str = Field(..., description="Key untuk mengakses gambar di storage")
 
+class ReportRequest(BaseModel):
+    nama_bank: str = Field(..., description="Nama bank")
+    accounts: List[DaftarAkunRequest] = Field(..., description="Daftar akun yang akan dilaporkan")
+ 
+   
 class TaskResponse(BaseModel):
     task_id: str
 

@@ -1,3 +1,4 @@
+from ast import List
 import os
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
@@ -72,6 +73,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"]
 )
 
 @app.post("/situs-judi/cari-rekening", response_model=TaskResponse)
@@ -344,6 +346,42 @@ async def generate_report(
     # Create filename with account number and timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"Laporan_Pembekuan_Rekening_{nomor_rekening}_{timestamp}.pdf"
+    
+    return Response(
+        content=pdf_bytes, 
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@app.post("/report/batch")
+async def generate_report(req: ReportRequest):
+    # Load template
+    template = env.get_template("report_batch.html")
+
+    for account in req.accounts:
+        #change oss_key to presigned URL
+        img_path = storage_manager.generate_presigned_url(account.oss_key, expiration=3600)
+        account.oss_key = img_path
+   
+    static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+    css_file = os.path.join(static_dir, "report.css")
+    
+    rendered_html = template.render(
+        nama_bank=req.nama_bank,
+        accounts=req.accounts,
+    )
+
+    # Generate PDF
+    if os.path.exists(css_file):
+        css = CSS(filename=css_file)
+        pdf_bytes = HTML(string=rendered_html).write_pdf(stylesheets=[css])
+    else:
+        logger.warning("CSS file not found, generating PDF without styling")
+        pdf_bytes = HTML(string=rendered_html).write_pdf()
+    
+    # Create filename with account number and timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"Laporan_Pembekuan_Rekening_{req.nama_bank}_{timestamp}.pdf"
     
     return Response(
         content=pdf_bytes, 
