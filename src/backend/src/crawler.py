@@ -11,7 +11,7 @@ from typing import Optional, List
 from browser_use import Agent, Controller, ActionResult, BrowserContext 
 import datetime
 
-from .config import llm_config, get_extraction_instruction, generate_random_identity, pre_registration_payment_discovery_prompt
+from .config import get_llm_config, get_extraction_instruction, generate_random_identity, pre_registration_payment_discovery_prompt
 from .model import  GamblingSiteData, PaymentDiscoveryResult, SiteInfo
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class IndonesianAccountExtractor:
             controller = Controller(output_model=PaymentDiscoveryResult)
             agent = Agent(
                 task=f"Navigate to {url} and {pre_registration_payment_discovery_prompt}",
-                llm=llm_config,
+                llm=get_llm_config(),
                 headless=True,
                 controller=controller,
                 capture_screenshots=False, 
@@ -150,7 +150,7 @@ class IndonesianAccountExtractor:
             controller = Controller(output_model=GamblingSiteData)
             agent = Agent(
                 task=task,
-                llm=llm_config,
+                llm=get_llm_config(),
                 headless=True,
                 controller=controller,
                 capture_screenshots=False

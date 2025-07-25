@@ -11,7 +11,8 @@ services:
       - NEO4J_URI=bolt://db:7687
       - NEO4J_USERNAME=${NEO4J_USERNAME}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
     depends_on:
       - db
       - redis
@@ -21,8 +22,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
-          cpus: '0.5'
+          memory: 1G
+          cpus: '1.0'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -39,7 +40,8 @@ services:
       - NEO4J_URI=bolt://db:7687
       - NEO4J_USERNAME=${NEO4J_USERNAME}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
     depends_on:
       - db
       - redis
@@ -59,7 +61,7 @@ services:
       retries: 3
 
   db:
-    image: neo4j:5.15
+    image: neo4j:5.15.0
     environment:
       - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
       - NEO4J_PLUGINS=["apoc"]

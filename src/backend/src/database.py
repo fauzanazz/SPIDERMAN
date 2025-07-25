@@ -9,20 +9,43 @@ logger = logging.getLogger(__name__)
 
 class Neo4jHandler:
     def __init__(self):
-        self.uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-        self.username = os.getenv("NEO4J_USERNAME", "neo4j")
-        self.password = os.getenv("NEO4J_PASSWORD", "your_password")
         self.driver = None
         self.connected = False
+        self._uri = None
+        self._username = None
+        self._password = None
+    
+    def _get_config(self):
+        """Get Neo4j configuration lazily when needed"""
+        if self._uri is None:
+            self._uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+            self._username = os.getenv("NEO4J_USERNAME", "neo4j")
+            self._password = os.getenv("NEO4J_PASSWORD")
+            
+            if not self._password:
+                # Log available environment variables for debugging
+                neo4j_env_vars = {k: v for k, v in os.environ.items() if 'NEO4J' in k}
+                logger.error(f"NEO4J_PASSWORD not found. Available Neo4j env vars: {neo4j_env_vars}")
+                raise ValueError("NEO4J_PASSWORD environment variable must be set")
+            
+            logger.info(f"Neo4j configuration loaded: URI={self._uri}, Username={self._username}")
+        
+        return self._uri, self._username, self._password
         
     def connect(self, max_retries=10, retry_delay=5):
         import time
         
+        try:
+            uri, username, password = self._get_config()
+        except ValueError as e:
+            logger.error(f"Configuration error: {e}")
+            return False
+        
         for attempt in range(max_retries):
             try:
                 self.driver = GraphDatabase.driver(
-                    self.uri, 
-                    auth=(self.username, self.password)
+                    uri, 
+                    auth=(username, password)
                 )
                 with self.driver.session() as session:
                     session.run("RETURN 1")
@@ -37,6 +60,7 @@ class Neo4jHandler:
                     time.sleep(retry_delay)
                 else:
                     logger.error(f"Gagal terhubung ke Neo4j setelah {max_retries} percobaan: {e}")
+                    logger.error(f"Final connection attempt failed with URI: {uri}, Username: {username}")
         
         return False
     

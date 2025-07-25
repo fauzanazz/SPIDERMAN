@@ -7,16 +7,26 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Browser-use configuration
-llm_config = None
-if os.environ.get("GOOGLE_API_KEY"):
-    llm_config = ChatGoogle(model="gemini-2.5-flash")
-elif os.environ.get("OPENAI_API_KEY"):
-    llm_config = ChatOpenAI(
-        model="gpt-4.1"
-    )
+def get_llm_config():
+    """Get LLM configuration, initialized lazily when needed"""
+    llm_provider = os.environ.get("LLM_PROVIDER", "").lower()
+    llm_api_key = os.environ.get("LLM_API_KEY")
 
-if llm_config is None:
-    raise ValueError("Either GOOGLE_API_KEY or OPENAI_API_KEY must be set in environment variables")
+    if not llm_api_key:
+        raise ValueError("LLM_API_KEY must be set in environment variables")
+
+    if llm_provider == "google":
+        return ChatGoogle(model="gemini-2.5-flash", api_key=llm_api_key)
+    elif llm_provider == "openai":
+        return ChatOpenAI(
+            model="gpt-4.1",
+            api_key=llm_api_key
+        )
+    else:
+        raise ValueError(f"Unsupported LLM_PROVIDER: {llm_provider}. Supported providers: 'openai', 'google'")
+
+# Maintain backward compatibility
+llm_config = None
 
 # Random identity generators for registration
 def generate_random_identity():

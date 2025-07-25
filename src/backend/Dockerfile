@@ -18,6 +18,15 @@ FROM python:3.11-slim-bookworm AS runtime
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH"
 
+RUN apt-get update && apt-get install -y \
+    libcairo2-dev \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-dev \
+    libffi-dev \
+    shared-mime-info \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
 RUN playwright install chromium --with-deps --no-shell

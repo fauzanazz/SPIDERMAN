@@ -24,11 +24,11 @@ services:
     deploy:
       resources:
         limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
           memory: 512M
           cpus: '0.5'
-        reservations:
-          memory: 256M
-          cpus: '0.25'
 
   worker:
     build:
@@ -61,7 +61,7 @@ services:
     scale: 2
 
   db:
-    image: neo4j:2025
+    image: neo4j:5.15.0
     container_name: neo4j-gambling-finder
     restart: always
     ports:
