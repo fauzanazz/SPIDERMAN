@@ -7,12 +7,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Browser-use configuration
+llm_config = None
 if os.environ.get("GOOGLE_API_KEY"):
-  llm_config = ChatGoogle(model="gemini-2.5-flash")
-if os.environ.get("OPENAI_API_KEY"):
-   llm_config = ChatOpenAI(
-       model="gpt-4.1"
-   )
+    llm_config = ChatGoogle(model="gemini-2.5-flash")
+elif os.environ.get("OPENAI_API_KEY"):
+    llm_config = ChatOpenAI(
+        model="gpt-4.1"
+    )
+
+if llm_config is None:
+    raise ValueError("Either GOOGLE_API_KEY or OPENAI_API_KEY must be set in environment variables")
 
 # Random identity generators for registration
 def generate_random_identity():
