@@ -19,17 +19,11 @@ FROM python:3.11-slim-bookworm AS runtime
 RUN groupadd -r worker && useradd -r -g worker worker -m
 
 RUN apt-get update && apt-get install -y \
-    libglib2.0-0 \
-    libgobject-2.0-0 \
-    libgtk-3-0 \
-    libgdk-pixbuf-2.0-0 \
-    libffi-dev \
-    shared-mime-info \
-    libcairo2 \
+    libcairo2-dev \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
-    libgdk-pixbuf2.0-0 \
-    libffi6 \
+    libgdk-pixbuf2.0-dev \
+    libffi-dev \
     shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
