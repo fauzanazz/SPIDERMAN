@@ -11,6 +11,15 @@ from weasyprint import HTML, CSS
 from .storage import storage_manager
 from jinja2 import Environment, FileSystemLoader
 
+from typing import Optional
+from .graph_schema import (
+    GraphFilters, NodeCreate, TransactionCreate,
+    GraphResponse, NodeDetailResponse, NodeCreateResponse, TransactionCreateResponse,
+    EntityType
+)
+from .graph_databse import graph_db
+
+
 from .worker import (
     cari_rekening_mencurigakan,
     cari_multiple_situs,
@@ -378,6 +387,186 @@ async def health_check():
         database_connected=database_connected,
         celery_connected=celery_connected
     )
+
+
+
+## Buat graphs 
+@app.get("/graph/entities", response_model=GraphResponse)
+async def get_whole_graph(
+    entity_types: Optional[str] = None,  # Comma-separated: "bank_account,crypto_wallet"
+    banks: Optional[str] = None,  # Comma-separated: "BRI,BCA"
+    e_wallets: Optional[str] = None,  # Comma-separated: "OVO,DANA"
+    cryptocurrencies: Optional[str] = None,  # Comma-separated: "Bitcoin,USDT"
+    phone_providers: Optional[str] = None,  # Comma-separated: "Simpati,XL"
+    priority_score_min: Optional[int] = None,
+    priority_score_max: Optional[int] = None,
+    search_query: Optional[str] = None
+):
+    """
+    Get all entities in the graph with optional filtering and clustering by gambling websites.
+    
+    Entities are clustered by the gambling sites where they appear, with standalone entities
+    (not linked to any site) returned separately.
+    
+    Query Parameters:
+    - entity_types: Filter by entity types (bank_account, crypto_wallet, e_wallet, phone_number, qris)
+    - banks: Filter bank accounts by bank names (BRI, BCA, BNI, Mandiri, etc.)
+    - e_wallets: Filter e-wallets by type (OVO, DANA, GoPay, LinkAja, etc.)
+    - cryptocurrencies: Filter crypto wallets by currency (Bitcoin, Ethereum, USDT, etc.)
+    - phone_providers: Filter phone numbers by provider (Simpati, XL, etc.)
+    - priority_score_min/max: Filter by priority score range
+    - search_query: Search by identifier (account number, wallet address, phone, etc.)
+    """
+    try:
+        # Parse comma-separated parameters
+        filters = GraphFilters(
+            entity_types=[EntityType(t.strip()) for t in entity_types.split(',')] if entity_types else None,
+            banks=banks.split(',') if banks else None,
+            e_wallets=e_wallets.split(',') if e_wallets else None,
+            cryptocurrencies=cryptocurrencies.split(',') if cryptocurrencies else None,
+            phone_providers=phone_providers.split(',') if phone_providers else None,
+            priority_score_min=priority_score_min,
+            priority_score_max=priority_score_max,
+            search_query=search_query
+        )
+        
+        result = graph_db.get_whole_graph(filters)
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid filter parameter: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error getting whole graph: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve graph: {str(e)}")
+
+@app.get("/graph/entities/{node_id}", response_model=NodeDetailResponse)
+async def get_node_detail(node_id: str):
+    try:
+        result = graph_db.get_node_detail(node_id)
+        
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"Node with ID {node_id} not found")
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting node detail for {node_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve node details: {str(e)}")
+
+@app.post("/graph/transactions", response_model=TransactionCreateResponse)
+async def create_transaction(transaction_data: TransactionCreate):
+    try:
+        result = graph_db.create_transaction(transaction_data)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to create transaction"))
+        
+        return TransactionCreateResponse(
+            success=True,
+            from_entity=result["from_entity"],
+            to_entity=result["to_entity"],
+            transaction=result["transaction"]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating transaction: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create transaction: {str(e)}")
+    
+@app.get("/graph/stats")
+async def get_graph_statistics():
+    try:
+        if not db_handler._check_connection():
+            raise HTTPException(status_code=503, detail="Database not connected")
+            
+        stats_query = """
+        MATCH (entity)
+        OPTIONAL MATCH (entity)-[t:TRANSFERS_TO]-()
+        WITH 
+            labels(entity)[0] as entity_type,
+            count(DISTINCT entity) as entity_count,
+            count(t) as transaction_count,
+            avg(coalesce(entity.priority_score, 0)) as avg_priority,
+            min(coalesce(entity.priority_score, 0)) as min_priority,
+            max(coalesce(entity.priority_score, 0)) as max_priority
+        RETURN 
+            entity_type,
+            entity_count,
+            transaction_count,
+            avg_priority,
+            min_priority,
+            max_priority
+        ORDER BY entity_count DESC
+        """
+        
+        with db_handler.driver.session() as session:
+            result = session.run(stats_query)
+            stats = []
+            
+            for record in result:
+                stats.append({
+                    "entity_type": record["entity_type"],
+                    "entity_count": record["entity_count"],
+                    "transaction_count": record["transaction_count"],
+                    "avg_priority": round(record["avg_priority"], 2) if record["avg_priority"] else 0,
+                    "min_priority": record["min_priority"],
+                    "max_priority": record["max_priority"]
+                })
+            
+            return {
+                "status": "success",
+                "statistics": stats,
+                "total_entities": sum(s["entity_count"] for s in stats),
+                "total_transactions": sum(s["transaction_count"] for s in stats) // 2  # Divide by 2 since each transaction is counted twice
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting graph statistics: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve statistics: {str(e)}")
+
+@app.post("/graph/entities/bulk")
+async def bulk_create_entities(entities: List[NodeCreate]):
+    try:
+        results = {
+            "successful": [],
+            "failed": [],
+            "total": len(entities)
+        }
+        
+        for entity_data in entities:
+            try:
+                result = graph_db.create_or_update_node(entity_data)
+                if result["success"]:
+                    results["successful"].append({
+                        "identifier": entity_data.identifier,
+                        "id": result["id"],
+                        "created": result["created"]
+                    })
+                else:
+                    results["failed"].append({
+                        "identifier": entity_data.identifier,
+                        "error": result.get("error", "Unknown error")
+                    })
+            except Exception as e:
+                results["failed"].append({
+                    "identifier": entity_data.identifier,
+                    "error": str(e)
+                })
+        
+        return {
+            "status": "completed",
+            "successful_count": len(results["successful"]),
+            "failed_count": len(results["failed"]),
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in bulk entity creation: {e}")
+        raise HTTPException(status_code=500, detail=f"Bulk operation failed: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn
