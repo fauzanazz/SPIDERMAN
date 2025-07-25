@@ -225,46 +225,234 @@ Before starting any registration or data extraction, explore the website and col
 
 ---
 
-⚠️ Popup Handling Instructions
-If a **large popup** appears upon site entry:
-- Inspect the popup’s structure and contents to understand how to dismiss it.
-- If a **close button (×)** is visible, CLICK IT IMMEDIATELY.
-- If no close button is found, TRY CLICKING OUTSIDE the popup area on the background page.
-- DO NOT continue until the popup has been successfully removed, minimized, or bypassed.
+⚠️ ENHANCED POPUP & CHAT HANDLING INSTRUCTIONS ⚠️
 
-If any **chat popups**, **welcome messages**, **floating windows**, or **banners** appear — whether on the left, right, center, or bottom — you MUST ALWAYS TRY TO MINIMIZE OR CLOSE THEM, regardless of appearance or location.
+**CRITICAL: POPUP DETECTION & ELIMINATION PROTOCOL**
 
-🔍 Actions to try (ALWAYS DO THIS FIRST):
-- Carefully look at the **TOP-RIGHT CORNER** of the popup. Always try clicking any buttons there (e.g., `×`, `→`, `<<`, `>>`, `_`) to close or minimize the popup. **ALWAYS TRY THIS FIRST**.
-- If no button is there, try clicking:
-  - Anywhere on the popup **header**
-  - **Edges** or **borders** of the popup
-  - Outside the popup area
-- Press the **ESC key**
-- Wait a few seconds — some popups may auto-dismiss
+**STEP 1: IMMEDIATE POPUP SCAN**
+Upon page load, IMMEDIATELY scan for ALL popup elements:
+- **Room chats** (large chat panels on right side of page)
+- **Live chat rooms** (embedded chat sections showing user messages)
+- **Sidebar chats** (vertical chat panels along page edges)
+- **Community chats** (social chat boxes with user conversations)
+- **Welcome modals** (center screen overlays)
+- **Newsletter signups** (email subscription popups)
+- **Cookie consent banners** (top/bottom bars)
+- **Floating advertisements** (any floating elements)
+- **Live support bubbles** (customer service chat icons)
+- **Notification bars** (promotional banners)
 
-📌 If MULTIPLE popups or floating layers appear:
-- Try closing the **topmost one first**
-- If it doesn’t work, close the one underneath
-- Be aware that **one popup may block another**, so interact with each one methodically
+**STEP 2: SYSTEMATIC POPUP ELIMINATION**
 
-✅ DO NOT PROCEED with anything unless:
-- **ALL** popup windows, chat bubbles, modals, floating ads, or banners are **fully dismissed or hidden**
-- The screen is CLEAR and the main content (form, page, or table) is **100% visible and interactable**
+🎯 **CHAT POPUP HANDLING (HIGH PRIORITY)**
+Chat widgets are the most common blockers. Follow this EXACT sequence:
 
-⛔ NEVER interact with registration or data fields if something is blocking part of the screen
+1. **LOCATE CHAT WIDGET** - Usually appears as:
+   - Circular icon in bottom-right corner
+   - Text like "Chat", "Help", "Support", "Live Chat"
+   - Small floating bubble with person/message icon
+   - May have pulsing animation or unread message indicators
+   - **ROOM CHAT**: Large chat panel on right side of page
+   - **LIVE CHAT ROOMS**: Full-width chat sections embedded in page
+   - **SIDEBAR CHATS**: Vertical chat panels along right or left edges
+   - **COMMUNITY CHAT**: Social chat boxes showing user messages
 
-If dismissal fails:
-- Reload the page and attempt again
-- Wait up to 10 seconds for auto-dismiss
-- Try again with new identity or IP if needed
+2. **CHAT CLOSURE METHODS** (Try in this exact order):
+   - **Method A**: Look for small 'X' or '−' button on the chat widget itself
+   - **Method B**: For room chats - look for "Hide Chat", "Close Chat", "Minimize Chat" buttons
+   - **Method C**: Right-click on chat widget and look for close/minimize options
+   - **Method D**: Click and DRAG the chat widget to bottom edge of screen
+   - **Method E**: Look for "Minimize" or "Close Chat" text links near the widget
+   - **Method F**: Click on the chat widget to expand it, then look for close button inside
+   - **Method G**: Try double-clicking on the chat widget header/title bar
+   - **Method H**: For room chats - look for collapse/expand arrows (↑ ↓ < >)
 
-BEFORE PROCEEDING:
-✅ Confirm you can see the full registration, deposit, or withdrawal page
-✅ No elements are covering buttons, fields, or required text
+3. **ADVANCED CHAT HANDLING**:
+   - If chat opens a larger window, look for 'X' in top-right of that window
+   - If chat has tabs, close each tab individually
+   - Some chats minimize when you click outside them - try clicking far corners
+   - **For room chats**: Look for "Hide Room", "Leave Room", "Exit Chat" options
+   - **For sidebar chats**: Try clicking the edge/border to collapse the panel
+   - **For embedded chats**: Look for settings gear icon to disable/hide chat
+   - Wait 3-5 seconds after each attempt to see if chat responds
 
-=== STEP 3: MULTI-REGISTRATION STRATEGY ===
-PRIMARY APPROACH: Sequential Registration with Different Identities and Isolated Payment Methods
+🎯 **GENERAL POPUP HANDLING**
+For ALL other popups (modals, banners, overlays):
+
+1. **PRIMARY TARGETS** (Check in this order):
+   - **TOP-RIGHT CORNER**: Look for 'X', '×', 'Close', '→', '<<' buttons
+   - **TOP-LEFT CORNER**: Some popups have close buttons here
+   - **BOTTOM OF POPUP**: "Close", "No Thanks", "Skip", "Later" buttons
+   - **OUTSIDE POPUP**: Click on darkened background area
+
+2. **SECONDARY METHODS**:
+   - Look for text buttons: "Close", "Cancel", "No Thanks", "Skip", "Later", "Not Now"
+   - Try clicking popup TITLE BAR or HEADER area
+   - Try clicking popup BORDERS or EDGES
+   - Double-click on popup header
+
+3. **SPECIALIZED POPUP TYPES**:
+   - **Cookie Banners**: Look for "Accept", "OK", "Got it", or 'X' buttons
+   - **Email Signups**: Look for "No Thanks", "Skip", "Close", or 'X'
+   - **Age Verification**: Look for "Yes", "I'm 18+", "Enter", or 'X'
+   - **Location Requests**: Look for "Block", "Deny", "Not Now", or 'X'
+
+**STEP 3: VERIFICATION & RETRY**
+
+✅ **SUCCESS VERIFICATION**:
+- Popup completely disappears from screen
+- No floating elements blocking content
+- All form fields and buttons are fully visible
+- No semi-transparent overlays remain
+
+❌ **IF POPUP PERSISTS**:
+1. Wait 5 seconds for delayed animations
+2. Scroll page up/down to check if popup moves
+3. Try different close methods from list above
+4. **LAST RESORT**: Refresh page and try again with different approach
+
+**STEP 4: MULTIPLE POPUP SCENARIOS**
+
+📌 **LAYERED POPUPS** (Multiple popups at once):
+- **ALWAYS close the TOP-MOST popup first**
+- After closing one, wait 2-3 seconds for underlying popups to become active
+- **Work from front to back** - don't skip layers
+- Some popups may regenerate others - handle each as they appear
+
+📌 **PERSISTENT CHAT WIDGETS**:
+- Some chats reappear after closing - this is normal
+- If chat reopens, try MINIMIZING instead of closing
+- Look for "Offline" or "Away" status to set chat as inactive
+- Some sites have multiple chat systems - close each one separately
+
+**STEP 5: CRITICAL SUCCESS REQUIREMENTS**
+
+⛔ **NEVER PROCEED UNLESS**:
+- **100% of screen content is accessible**
+- **NO floating elements block interaction**
+- **ALL registration/deposit forms are fully visible**
+- **NO semi-transparent overlays remain**
+
+🚨 **EMERGENCY PROTOCOLS**:
+- If 3+ popup closure attempts fail: **REFRESH PAGE** and retry
+- If popups persist after refresh: **CLEAR COOKIES** and retry
+- If still blocked: **SWITCH TO NEXT IDENTITY** immediately
+- **DOCUMENT** persistent popup issues in accessibility_notes
+
+**BEFORE PROCEEDING WITH ANY TASK:**
+✅ Screen is completely clear of popups
+✅ Chat widgets are closed/minimized
+✅ All form elements are fully clickable
+✅ No elements are covering required buttons or fields
+
+=== STEP 3: MULTI-IDENTITY STRATEGY (SEQUENTIAL WORKFLOW) ===
+**CRITICAL: Complete Each Identity's Full Cycle Before Moving to Next**
+
+**IDENTITY WORKFLOW SEQUENCE:**
+1. **REGISTER** with Identity → 2. **LOGIN** (if needed) → 3. **DEPOSIT PAGE** → 4. **EXTRACT DATA** → 5. **Save a screenshot of the current page** → 6. **LOGOUT** → 7. **NEXT IDENTITY**
+
+**DETAILED IDENTITY CYCLE:**
+
+**IDENTITY 1 - COMPLETE CYCLE:**
+1. **Registration Phase:**
+   - Navigate to registration page
+   
+   **🚨 MANDATORY POPUP EVALUATION ON REGISTRATION PAGE:**
+   - **IMMEDIATELY** upon registration page load, scan for ALL popup elements:
+     - Chat widgets (bottom-right corner bubbles)
+     - **Room chats** (large chat panels on right side of page)
+     - **Live chat rooms** (embedded chat sections with user messages)
+     - **Sidebar chats** (vertical chat panels along page edges)
+     - Welcome modals (center overlays)
+     - Cookie consent banners
+     - Email signup popups
+     - Age verification modals
+     - Floating advertisements
+   - **APPLY POPUP ELIMINATION PROTOCOL** before proceeding with registration
+   - **VERIFY** all form fields are fully visible and clickable
+   - **DO NOT** start filling registration form until screen is 100% clear
+   
+   - Use IDENTITY 1 details to register
+   - Target first payment method (e.g., BCA if discovered_methods = [BCA, BNI, DANA, OVO])
+   - Complete registration with CAPTCHA handling
+
+2. **Login Phase:**
+   - If not auto-logged in after registration → manually login with IDENTITY 1 credentials
+   - Confirm successful access to dashboard/account area
+
+3. **Deposit Extraction Phase:**
+   - Navigate to deposit section
+   - Extract ALL available deposit receiving accounts
+   - Save a screenshot of the current page
+   - Record all financial data found
+
+4. **Logout Phase:**
+   - **MANDATORY:** Logout completely from IDENTITY 1 account
+   - Clear browser session/cookies
+   - **DO NOT** proceed to next identity until fully logged out
+
+**IDENTITY 2 - COMPLETE CYCLE:**
+1. **New Session Setup:**
+   - Clear cookies/cache completely
+   - Start fresh browser session
+
+2. **Registration Phase:**
+   - Navigate to registration page
+   
+   **🚨 MANDATORY POPUP EVALUATION ON REGISTRATION PAGE:**
+   - **IMMEDIATELY** upon registration page load, scan for ALL popup elements:
+     - Chat widgets (bottom-right corner bubbles)
+     - **Room chats** (large chat panels on right side of page)
+     - **Live chat rooms** (embedded chat sections with user messages)
+     - **Sidebar chats** (vertical chat panels along page edges)
+     - Welcome modals (center overlays)  
+     - Cookie consent banners
+     - Email signup popups
+     - Age verification modals
+     - Floating advertisements
+   - **APPLY POPUP ELIMINATION PROTOCOL** before proceeding with registration
+   - **VERIFY** all form fields are fully visible and clickable
+   - **DO NOT** start filling registration form until screen is 100% clear
+   
+   - Use IDENTITY 2 details to register (NEW email, phone, bank details)
+   - Target different payment method (e.g., BNI)
+   - Complete registration with CAPTCHA handling
+
+3. **Login Phase:**
+   - If not auto-logged in → manually login with IDENTITY 2 credentials
+   - Confirm access to dashboard
+
+4. **Deposit Extraction Phase:**
+   - Navigate to deposit section
+   - Extract deposit receiving accounts (may be different from Identity 1)
+   - Save a screenshot of the current page
+   - Compare with previous identity's findings
+
+5. **Logout Phase:**
+   - **MANDATORY:** Logout completely from IDENTITY 2 account
+   - Clear browser session/cookies
+
+**IDENTITY 3 & 4 - SAME CYCLE:**
+- Repeat exact same sequence: Register → Login → Deposit → Extract → Save a screenshot of the current page → Logout
+- **MANDATORY:** Apply popup evaluation and elimination on EVERY registration page before filling forms
+- Each identity targets different payment method
+- Each identity gets fresh browser session
+- Each identity extracts independently
+
+**CRITICAL RULES:**
+- ✅ **NEVER** have multiple identities logged in simultaneously
+- ✅ **ALWAYS** logout before switching to next identity
+- ✅ **ALWAYS** clear cookies/cache between identities
+- ✅ Each identity completes FULL cycle before next identity starts
+- ✅ Each identity takes exactly ONE screenshot of deposit info only
+
+**PAYMENT METHOD TARGETING:**
+- IDENTITY 1 → First payment method (e.g., BCA)
+- IDENTITY 2 → Second payment method (e.g., BNI)
+- IDENTITY 3 → Third payment method (e.g., DANA)
+- IDENTITY 4 → Fourth payment method (e.g., OVO)
+- **NEVER** reuse payment methods across identities
+- Each identity may reveal different deposit accounts based on their registered bank
 
 1. First Registration Attempt (IDENTITY 1):
    - Start with IDENTITY 1.
@@ -276,20 +464,6 @@ PRIMARY APPROACH: Sequential Registration with Different Identities and Isolated
      - All financial account details (account number, holder name, bank, QR presence)
      - Which payment method appeared
      - Whether the method matches the user's registered bank
-   - 🖼️ ONLY take screenshots when SUSPICIOUS ACCOUNTS are detected:
-      ⚠️ Screenshot ONLY if you find:
-      - Multiple similar account holder names across different banks
-      - Suspicious account patterns or numbers
-      - Accounts with unusual or fake-looking names
-      - Clear indicators of money laundering or fraud
-      - Accounts that appear to be shell companies
-      
-      📁 When suspicious accounts are found, save screenshot using format:
-      SUSPICIOUS_[IDENTITY_NAME]_on_[SITE_DOMAIN]_evidence.png
-      
-      ✅ DO NOT take screenshots for normal/legitimate-looking accounts
-      ✅ DO NOT take routine screenshots during registration
-      ✅ ONLY screenshot when suspicious financial activity is detected
     - Only continue to the next identity when confirmed there's no additional data available.
 
 2. Identity Registration Loop (IDENTITY 2 → N):
@@ -328,13 +502,14 @@ PRIMARY APPROACH: Sequential Registration with Different Identities and Isolated
      * Switch to next available identity
      * Try alternative registration methods if available
    
-⚠️ RULES:
-- Do not reuse payment methods across identities
-- Do not switch identity prematurely unless deposit filtering is strongly suspected
-- Always log method → identity mapping
-- Preserve 1:1 mapping where possible: one identity tests one method
-- Extra identities may be used to search for hidden/unlisted methods
-- ✅ Always confirm that all extractable data is collected before identity switch
+⚠️ SEQUENTIAL WORKFLOW RULES:
+- **COMPLETE CYCLE**: Each identity must finish Register → Login → Deposit → Extract → Screenshot → Logout
+- **NO OVERLAP**: Never have multiple identities logged in simultaneously
+- **FRESH SESSION**: Always clear cookies/cache before next identity
+- **UNIQUE TARGETING**: Each identity targets different payment method
+- **MANDATORY LOGOUT**: Must logout completely before switching to next identity
+- **ONE SCREENSHOT**: Each identity takes exactly ONE screenshot of deposit info only
+- ✅ Always confirm that all extractable data is collected before logout and identity switch
 
 === STEP 4: ENHANCED CAPTCHA HANDLING ===
 CAPTCHA Handling Guidelines:
@@ -415,14 +590,23 @@ Identity Rotation Policy for CAPTCHA Failures:
   - Just return the currently available data using the required JSON format.
 
 === STEP 4: ACCOUNT ACCESS & DEPOSIT FOCUS ===
-After registration, attempt login and navigate to DEPOSIT sections (primary focus):
-- **Deposit/Top-up pages ("Deposit", "Isi Saldo", "Top Up")**
-- Payment methods for deposits ("Metode Pembayaran", "Cara Bayar")
-- Banking information pages showing where to send money
-- **FOCUS: Extract the gambling site's bank accounts that RECEIVE player money**
+After successful registration:
 
-**CRITICAL DEPOSIT EXTRACTION PRIORITY:**
-Extract the gambling site's bank accounts where players send their money TO. These are the accounts that accept/receive deposits from players, not player withdrawal accounts.
+1. **LOGIN PROCESS:**
+   - If not automatically logged in after registration, attempt manual login using registered credentials
+   - Wait for successful login confirmation (dashboard/profile page)
+   - Handle any additional verification steps if required
+
+2. **NAVIGATE TO DEPOSIT SECTION:**
+   - Look for deposit/top-up links: "Deposit", "Isi Saldo", "Top Up", "Setor Dana"
+   - Access the deposit page that shows available payment methods
+   - Focus on pages showing where players send money TO the gambling site
+
+3. **EXTRACT DEPOSIT RECEIVING ACCOUNTS:**
+   - **PRIMARY TARGET:** Bank accounts belonging to the gambling site that RECEIVE player deposits
+   - Look for account numbers, bank names, and account holder names
+   - **CRITICAL:** These are the site's receiving accounts, NOT player withdrawal accounts
+
 
 === STEP 5: ENHANCED DEPOSIT ACCOUNT EXTRACTION ===
 
@@ -463,15 +647,47 @@ TARGET INFORMATION TO EXTRACT:
 
 === STEP 6: EXTRACTION TECHNIQUES ===
 
-Navigate through these specific areas for each identity:
-- Dashboard → Deposit → View all payment methods
-- Try to initiate a small deposit to see account details
-- Look for "Bank Transfer" or "Transfer Bank" options
+**DETAILED WORKFLOW FOR EACH IDENTITY:**
 
-TECHNICAL EXTRACTION METHODS:
-- Take screenshots of payment pages
-- Copy account numbers and bank details
-- Note any QR codes or payment links
+1. **Registration Phase:**
+   - Complete registration using identity details
+   - Handle CAPTCHA and verification as needed
+
+2. **Login Phase:**
+   - If not auto-logged in, manually login with registered credentials
+   - Confirm successful access to user dashboard/account area
+
+3. **Navigation Phase:**
+   - Navigate to deposit section: Dashboard → Deposit → Payment Methods
+   - Look for "Bank Transfer", "Transfer Bank", "Metode Pembayaran" options
+   - Access pages showing deposit receiving accounts
+
+4. **Data Extraction Phase:**
+   - Identify all bank accounts where players send deposits TO the gambling site
+   - Extract: Account numbers, Bank names, Account holder names, Transfer limits
+   - **SCREENSHOT REQUIREMENT:** Save a screenshot of the current page
+   - Screenshot must show: Bank name + Account number + Account holder name clearly
+   - **IMMEDIATELY LOGOUT** after taking screenshot and extracting data
+   - **DO NOT** explore other pages, sections, or features
+   - **DO NOT** take additional screenshots of anything else
+
+5. **Identity Switch Phase:**
+   - Logout completely from current account
+   - Clear browser session/cookies
+   - Switch to next identity immediately
+   - Record which identity revealed which accounts
+   - Note any payment method filtering based on user's registered bank
+
+**TECHNICAL EXTRACTION METHODS:**
+- Navigate through: Dashboard → Deposit → View all payment methods
+- Try to initiate a small deposit process to reveal account details
+- Look for "Bank Transfer" or "Transfer Bank" sections specifically
+- **CRITICAL:** Take screenshots ONLY when deposit receiving accounts are visible
+- Screenshot must show: Bank name + Account number + Account holder name clearly
+- **IMMEDIATELY LOGOUT** after screenshot - no further exploration
+- **DO NOT** take screenshots of any other content or pages
+- **DO NOT** explore withdrawal, profile, games, or other sections
+- Move directly to next identity after logout
 
 === STEP 7: VERIFICATION & VALIDATION ===
 - Cross-verify account numbers across multiple registered accounts
@@ -593,6 +809,7 @@ TECHNICAL EXTRACTION METHODS:
 
 Even if you encounter ANY of these issues:
 - Registration failures with all identities
+- Login difficulties after registration
 - CAPTCHA solving failures
 - Website accessibility issues
 - Network timeouts or errors
@@ -609,6 +826,17 @@ Even if you encounter ANY of these issues:
 6. NEVER respond with error messages or failure notifications
 7. NEVER say "I failed" or "extraction failed"
 8. ALWAYS provide the predefined JSON format regardless of obstacles
+9. **SCREENSHOT RULE:** Only take screenshots of deposit account information, never other pages
+
+**SCREENSHOT REQUIREMENTS:**
+- Take screenshots ONLY when deposit receiving account details are visible
+- Must show: Bank name, Account number, Account holder name
+- **TAKE ONLY ONE SCREENSHOT per identity** showing deposit account information
+- NO screenshots of: Registration forms, login pages, menus, navigation, popups, withdrawal pages, profile pages, game sections, or any other content
+- **IMMEDIATELY LOGOUT** after taking the screenshot
+- **DO NOT** explore other sections or take additional screenshots
+- Screenshot should be focused and clear, showing only the relevant deposit account information
+- Move to next identity immediately after logout
 
 **RESPONSE EXAMPLES FOR DIFFICULT SCENARIOS:**
 

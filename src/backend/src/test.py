@@ -1,9 +1,11 @@
 import asyncio
 import json
+import datetime
 from dotenv import load_dotenv
 load_dotenv()
 from browser_use import Agent, Controller
 from browser_use.llm import ChatGoogle
+from browser_use import Agent, Controller, ActionResult, BrowserContext 
 from config import get_extraction_instruction, generate_random_identity
 from model import GamblingSiteData
 
@@ -25,13 +27,27 @@ async def main():
     identities = [generate_random_identity() for _ in range(1)]
     # Add famous Indonesian banks as discovered payment methods
     famous_banks = ["BCA", "BRI", "BNI", "Mandiri", "CIMB Niaga", "Danamon", "OVO", "GoPay", "DANA"]
-    extraction_instruction = get_extraction_instruction(identities, famous_banks)
+    # extraction_instruction = get_extraction_instruction(identities, famous_banks)
+
     controller = Controller(output_model=GamblingSiteData)
     agent = Agent(
-        task=f"Navigate to https://arab19.sbs/ and {extraction_instruction}",
+        task=f"Navigate to https://arab19.sbs/ and then go to register page and Save a screenshot of the current page",
         llm=ChatGoogle(model="gemini-2.5-flash"),
         controller=controller,
+        capture_screenshots=False
     )
+
+    @controller.action('Save a screenshot of the current page')
+    async def save_screenshot(browser: BrowserContext):
+        page = await browser.get_current_page()
+        screenshot = await page.screenshot(full_page=True, animations='disabled')
+        filename = f"screenshot_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        with open(filename, 'wb') as f:
+            f.write(screenshot)
+        return ActionResult(
+            extracted_content=f'Saved a screenshot of the page to {filename}',
+            include_in_memory=True
+        )
     result = await agent.run()
     screenshots = result.screenshots()
     number_screenshots = 0
@@ -126,6 +142,6 @@ async def save_images():
 # Run the storage tests
 if __name__ == "__main__":
     print("=== Testing Storage Manager ===")
-    asyncio.run(save_images())
+    asyncio.run(main())
     
 

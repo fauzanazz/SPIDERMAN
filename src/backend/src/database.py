@@ -213,15 +213,15 @@ class Neo4jHandler:
                         raise
                 
                 # Process payment methods with detailed logging
-                logger.debug(f"[DB-PAYMENTS] Memproses {len(valid_payment_gateways)} metode pembayaran yang valid...")
-                for i, payment in enumerate(valid_payment_gateways, 1):
-                    try:
-                        self._store_payment_method(session, site_domain, payment)
-                        logger.debug(f"[DB-PAYMENT] {i}/{len(valid_payment_gateways)} - {payment.gateway_name}")
-                    except Exception as e:
-                        logger.error(f"[DB-PAYMENT-FAILED] {i}/{len(valid_payment_gateways)} - {payment.gateway_name}: {str(e)}")
-                        # Continue processing other payments even if one fails
-                        continue
+                # logger.debug(f"[DB-PAYMENTS] Memproses {len(valid_payment_gateways)} metode pembayaran yang valid...")
+                # for i, payment in enumerate(valid_payment_gateways, 1):
+                #     try:
+                #         self._store_payment_method(session, site_domain, payment)
+                #         logger.debug(f"[DB-PAYMENT] {i}/{len(valid_payment_gateways)} - {payment.gateway_name}")
+                #     except Exception as e:
+                #         logger.error(f"[DB-PAYMENT-FAILED] {i}/{len(valid_payment_gateways)} - {payment.gateway_name}: {str(e)}")
+                #         # Continue processing other payments even if one fails
+                #         continue
                 
                 logger.info(f"[DB-COMPLETE] BERHASIL simpan semua data untuk situs: {site_domain}")
                 logger.info(f"[DB-SUMMARY] Tersimpan - Accounts: {len(valid_bank_accounts)}, Wallets: {len(valid_crypto_wallets)}, Payments: {len(valid_payment_gateways)}")
