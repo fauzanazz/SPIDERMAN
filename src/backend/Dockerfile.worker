@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without dev --n
 
 FROM python:3.11-slim-bookworm AS runtime
 
-RUN groupadd -r worker && useradd -r -g worker worker
+RUN groupadd -r worker && useradd -r -g worker worker -m
 
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH" \
@@ -31,7 +31,10 @@ COPY src/ /app/src/
 
 WORKDIR /app
 
-RUN chown -R worker:worker /app
+RUN chown -R worker:worker /app && \
+    mkdir -p /home/worker/.config && \
+    chown -R worker:worker /home/worker
+
 USER worker
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
