@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from weasyprint import HTML, CSS
 from .storage import storage_manager
 from jinja2 import Environment, FileSystemLoader
+from typing import List
 
 from typing import Optional
 from .graph_schema import (
