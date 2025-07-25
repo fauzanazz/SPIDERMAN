@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Moon, Sun, User, Network, Map, Shield } from "lucide-react";
+import { Bell, Moon, Sun, User, Network, Shield } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

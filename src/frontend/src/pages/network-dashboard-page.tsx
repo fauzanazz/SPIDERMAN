@@ -17,6 +17,11 @@ export function NetworkDashboard() {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
+  // Track if we're in node-centered mode
+  const [centerNodeId, setCenterNodeId] = useState<string | undefined>(
+    undefined
+  );
+
   // Backend-compatible filters
   const [filters, setFilters] = useState<GraphFilters>({
     entity_types: [],
@@ -29,25 +34,36 @@ export function NetworkDashboard() {
     search_query: undefined,
   });
 
-  // Handle entity selection
+  // Handle entity selection - switch to node-centered mode
   const handleEntitySelect = (entity: Entity) => {
     setSelectedEntity(entity);
+    // Switch to node-centered mode when an entity is selected
+    setCenterNodeId(entity.id);
   };
 
-  // Handle data refresh - this will trigger refetch in NetworkGraphView
+  // Handle returning to full graph view
+  const handleReturnToFullGraph = () => {
+    setCenterNodeId(undefined);
+    setSelectedEntity(null);
+  };
+
   const handleRefreshData = () => {
-    // This function will be passed down to components that need to refresh data
     console.log("Refreshing graph data...");
   };
 
   // Convert backend filters to legacy format for backward compatibility with MainView
   const legacyFilters = {
-    priorityLevel:
-      filters.priority_score_min !== undefined ||
-      filters.priority_score_max !== undefined
-        ? "custom"
-        : "all",
-    entityType: (filters.entity_types?.[0] as any) || "all",
+    priorityLevel: (filters.priority_score_min !== undefined ||
+    filters.priority_score_max !== undefined
+      ? "custom"
+      : "all") as "custom" | "all" | "high" | "medium" | "low",
+    entityType: (filters.entity_types?.[0] || "all") as
+      | "all"
+      | "bank_account"
+      | "e_wallet"
+      | "phone_number"
+      | "qris"
+      | "crypto_wallet",
     timeRange: "30d" as const, // Default since backend doesn't have time-based filtering yet
     searchQuery: filters.search_query || "",
   };
@@ -65,6 +81,8 @@ export function NetworkDashboard() {
           // Pass backend filters to the NetworkGraphView
           backendFilters={filters}
           onRefreshData={handleRefreshData}
+          centerNodeId={centerNodeId}
+          onReturnToFullGraph={handleReturnToFullGraph}
         />
 
         <LeftSidebar

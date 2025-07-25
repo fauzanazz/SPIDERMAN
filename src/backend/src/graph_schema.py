@@ -1,6 +1,6 @@
 # src/backend/src/graph_schema.py
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 from enum import Enum
 from datetime import datetime
 

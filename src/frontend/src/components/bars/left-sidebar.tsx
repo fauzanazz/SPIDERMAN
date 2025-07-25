@@ -34,8 +34,17 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PriorityLevel, type Entity } from "@/lib/types/entity";
-import { graphApi } from "@/lib/api/graph-api";
+import {
+  PriorityLevel,
+  type Entity,
+  convertBackendEntityToFrontend,
+  type BackendEntity,
+  type BankAccountProvider,
+  type CryptoProvider,
+  type EWalletProvider,
+  type PhoneProvider,
+} from "@/lib/types/entity";
+import { graphApi, type EntityNode } from "@/lib/api/graph-api";
 
 interface LeftSidebarProps {
   selectedEntity: Entity | null;
@@ -44,6 +53,18 @@ interface LeftSidebarProps {
   onToggleCollapse: () => void;
   onEntitySelect?: (entity: Entity) => void;
 }
+
+// Helper function to convert EntityNode to BackendEntity format
+const entityNodeToBackendEntity = (entityNode: EntityNode): BackendEntity => ({
+  ...entityNode,
+  entity_type: entityNode.entity_type,
+  account_holder: entityNode.account_holder,
+  connected_entities: [], // EntityNode doesn't have this, so we provide empty array
+  bank_name: entityNode.bank_name as BankAccountProvider,
+  cryptocurrency: entityNode.cryptocurrency as CryptoProvider,
+  wallet_type: entityNode.wallet_type as EWalletProvider,
+  phone_provider: entityNode.phone_provider as PhoneProvider,
+});
 
 export function LeftSidebar({
   selectedEntity,
@@ -64,7 +85,7 @@ export function LeftSidebar({
     queryFn: () =>
       selectedEntity ? graphApi.getNodeDetail(selectedEntity.id) : null,
     enabled: !!selectedEntity?.id,
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
     refetchOnWindowFocus: false,
   });
 
@@ -216,7 +237,6 @@ export function LeftSidebar({
                     </div>
                   )}
 
-                  {/* Tabs */}
                   <Tabs
                     value={activeTab}
                     onValueChange={setActiveTab}
@@ -474,46 +494,56 @@ export function LeftSidebar({
                                 nodeDetail.connected_entities.length > 0 ? (
                                 <div className="space-y-3">
                                   {nodeDetail.connected_entities.map(
-                                    (connectedEntity, index) => (
-                                      <div
-                                        key={index}
-                                        className="flex items-center justify-between p-2 border border-gray-700 rounded bg-gray-800/30 cursor-pointer hover:bg-gray-700/30 transition-colors"
-                                        onClick={() =>
-                                          onEntitySelect &&
-                                          onEntitySelect(connectedEntity)
-                                        }
-                                      >
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium truncate text-white font-mono">
-                                            {connectedEntity.identifier}
-                                          </p>
-                                          <p className="text-xs text-gray-400">
-                                            {connectedEntity.account_holder} -{" "}
-                                            {connectedEntity.entity_type.replace(
-                                              "_",
-                                              " "
-                                            )}
-                                          </p>
+                                    (connectedEntityNode, index) => {
+                                      // Convert EntityNode to Entity
+                                      const connectedEntity =
+                                        convertBackendEntityToFrontend(
+                                          entityNodeToBackendEntity(
+                                            connectedEntityNode
+                                          )
+                                        );
+
+                                      return (
+                                        <div
+                                          key={index}
+                                          className="flex items-center justify-between p-2 border border-gray-700 rounded bg-gray-800/30 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                                          onClick={() =>
+                                            onEntitySelect &&
+                                            onEntitySelect(connectedEntity)
+                                          }
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate text-white font-mono">
+                                              {connectedEntity.identifier}
+                                            </p>
+                                            <p className="text-xs text-gray-400">
+                                              {connectedEntity.accountHolder} -{" "}
+                                              {connectedEntity.type.replace(
+                                                "_",
+                                                " "
+                                              )}
+                                            </p>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Badge
+                                              variant={
+                                                connectedEntity.priorityScore >=
+                                                80
+                                                  ? "destructive"
+                                                  : connectedEntity.priorityScore >=
+                                                      60
+                                                    ? "secondary"
+                                                    : "outline"
+                                              }
+                                              className="text-xs"
+                                            >
+                                              {connectedEntity.priorityScore}
+                                            </Badge>
+                                            <Network className="h-3 w-3 text-gray-500" />
+                                          </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                          <Badge
-                                            variant={
-                                              connectedEntity.priority_score >=
-                                              80
-                                                ? "destructive"
-                                                : connectedEntity.priority_score >=
-                                                    60
-                                                  ? "secondary"
-                                                  : "outline"
-                                            }
-                                            className="text-xs"
-                                          >
-                                            {connectedEntity.priority_score}
-                                          </Badge>
-                                          <Network className="h-3 w-3 text-gray-500" />
-                                        </div>
-                                      </div>
-                                    )
+                                      );
+                                    }
                                   )}
                                 </div>
                               ) : (

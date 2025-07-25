@@ -1,4 +1,3 @@
-
 import { config } from "@/lib/config";
 
 export interface GraphFilters {
@@ -32,7 +31,7 @@ export interface EntityNode {
   cryptocurrency?: string;
   wallet_type?: string;
   phone_provider?: string;
-  additional_info?: Record<string, any>;
+  additional_info?: Record<string, string | string[]>;
 }
 
 export interface Transaction {
@@ -80,7 +79,7 @@ export interface NodeCreate {
   cryptocurrency?: string;
   wallet_type?: string;
   phone_provider?: string;
-  additional_info?: Record<string, any>;
+  additional_info?: Record<string, string | number | boolean | string[]>;
 }
 
 export interface TransactionCreate {
@@ -159,7 +158,25 @@ export class GraphApiClient {
     return response.json();
   }
 
-  async createOrUpdateNode(nodeData: NodeCreate): Promise<any> {
+  async getNodeCenteredGraph(
+    nodeId: string,
+    filters: GraphFilters = {}
+  ): Promise<GraphResponse> {
+    const params = this.buildQueryParams(filters);
+    // Add the center node parameter
+    params.set("center_node", nodeId);
+    const url = `${this.baseUrl}/graph/entities?${params.toString()}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to fetch node-centered graph: ${error}`);
+    }
+
+    return response.json();
+  }
+
+  async createOrUpdateNode(nodeData: NodeCreate): Promise<EntityNode> {
     const url = `${this.baseUrl}/graph/entities`;
 
     const response = await fetch(url, {
@@ -178,7 +195,9 @@ export class GraphApiClient {
     return response.json();
   }
 
-  async createTransaction(transactionData: TransactionCreate): Promise<any> {
+  async createTransaction(
+    transactionData: TransactionCreate
+  ): Promise<Transaction> {
     const url = `${this.baseUrl}/graph/transactions`;
 
     const response = await fetch(url, {
@@ -217,5 +236,15 @@ export const useNodeDetail = (nodeId: string) => {
     queryFn: () => graphApi.getNodeDetail(nodeId),
     enabled: !!nodeId,
     staleTime: 60000, // 1 minute
+  };
+};
+
+export const useNodeCenteredGraph = (nodeId: string, filters: GraphFilters) => {
+  return {
+    queryKey: ["node-centered-graph", nodeId, filters],
+    queryFn: () => graphApi.getNodeCenteredGraph(nodeId, filters),
+    enabled: !!nodeId,
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: false,
   };
 };

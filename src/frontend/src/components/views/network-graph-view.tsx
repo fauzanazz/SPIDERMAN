@@ -25,6 +25,11 @@ import {
 import {
   convertBackendEntityToFrontend,
   type Entity,
+  type BackendEntity,
+  type BankAccountProvider,
+  type CryptoProvider,
+  type EWalletProvider,
+  type PhoneProvider,
 } from "@/lib/types/entity";
 
 interface NetworkGraphViewProps {
@@ -32,6 +37,8 @@ interface NetworkGraphViewProps {
   onEntitySelect: (entity: Entity) => void;
   selectedEntity: Entity | null;
   onRefreshData?: () => void;
+  centerNodeId?: string; // Optional: if provided, show node-centered graph
+  onReturnToFullGraph?: () => void; // Callback to return to full graph view
 }
 
 interface NetworkNode extends d3.SimulationNodeDatum {
@@ -47,11 +54,146 @@ interface NetworkEdge {
   type: "transaction" | "same_site" | "connected";
 }
 
+// Define proper types for backend graph data
+interface BackendGraphData {
+  clusters?: Array<{
+    website_name: string;
+    entities: EntityNode[];
+  }>;
+  standalone_entities?: EntityNode[];
+  total_transactions?: number;
+}
+
+// Convert backend data to D3 network format
+const convertToNetworkData = (graphData: BackendGraphData) => {
+  const nodes: NetworkNode[] = [];
+  const edges: NetworkEdge[] = [];
+  const nodeMap = new Map<string, NetworkNode>();
+
+  // Helper function to convert EntityNode to BackendEntity format
+  const entityNodeToBackendEntity = (
+    entityNode: EntityNode
+  ): BackendEntity => {
+    // Filter additional_info to only include string or string[] values
+    let filteredAdditionalInfo: Record<string, string | string[]> | undefined = undefined;
+    if (entityNode.additional_info) {
+      filteredAdditionalInfo = Object.fromEntries(
+        Object.entries(entityNode.additional_info).filter(
+          ([, value]) =>
+            typeof value === "string" ||
+            (Array.isArray(value) && value.every((v) => typeof v === "string"))
+        )
+      );
+    }
+    return {
+      ...entityNode,
+      entity_type: entityNode.entity_type,
+      account_holder: entityNode.account_holder,
+      connected_entities: [], // EntityNode doesn't have this, so we provide empty array
+      bank_name: entityNode.bank_name as BankAccountProvider,
+      cryptocurrency: entityNode.cryptocurrency as CryptoProvider,
+      wallet_type: entityNode.wallet_type as EWalletProvider,
+      phone_provider: entityNode.phone_provider as PhoneProvider,
+      additional_info: filteredAdditionalInfo,
+    };
+  };
+
+  // Process clustered entities (from gambling sites)
+  graphData.clusters?.forEach((cluster) => {
+    cluster.entities.forEach((backendEntity: EntityNode) => {
+      const entity = convertBackendEntityToFrontend(
+        entityNodeToBackendEntity(backendEntity)
+      );
+      const node: NetworkNode = {
+        id: backendEntity.id,
+        entity,
+        cluster: cluster.website_name,
+      };
+      nodes.push(node);
+      nodeMap.set(backendEntity.id, node);
+    });
+
+    // Create edges between entities in the same cluster (gambling site)
+    if (cluster.entities.length > 1) {
+      for (let i = 0; i < cluster.entities.length; i++) {
+        for (let j = i + 1; j < cluster.entities.length; j++) {
+          edges.push({
+            source: cluster.entities[i].id,
+            target: cluster.entities[j].id,
+            strength: 0.3,
+            type: "same_site",
+          });
+        }
+      }
+    }
+  });
+
+  // Process standalone entities
+  graphData.standalone_entities?.forEach((backendEntity: EntityNode) => {
+    const entity = convertBackendEntityToFrontend(
+      entityNodeToBackendEntity(backendEntity)
+    );
+    const node: NetworkNode = {
+      id: backendEntity.id,
+      entity,
+      cluster: "standalone",
+    };
+    nodes.push(node);
+    nodeMap.set(backendEntity.id, node);
+  });
+
+  // Create additional edges based on connections (this would be enhanced with actual transaction data)
+  nodes.forEach((node) => {
+    if (node.entity.connections > 0) {
+      // For now, create some connections based on priority scores and entity types
+      const potentialConnections = nodes.filter(
+        (otherNode) =>
+          otherNode.id !== node.id &&
+          otherNode.entity.type === node.entity.type &&
+          Math.abs(otherNode.entity.priorityScore - node.entity.priorityScore) <
+            20
+      );
+
+      // Add a few connections randomly
+      const numConnections = Math.min(
+        Math.floor(Math.random() * 3) + 1,
+        potentialConnections.length
+      );
+
+      for (let i = 0; i < numConnections; i++) {
+        const target =
+          potentialConnections[
+            Math.floor(Math.random() * potentialConnections.length)
+          ];
+        if (
+          target &&
+          !edges.some(
+            (e) =>
+              (e.source === node.id && e.target === target.id) ||
+              (e.source === target.id && e.target === node.id)
+          )
+        ) {
+          edges.push({
+            source: node.id,
+            target: target.id,
+            strength: 0.6,
+            type: "connected",
+          });
+        }
+      }
+    }
+  });
+
+  return { nodes, edges };
+};
+
 export function NetworkGraphView({
   filters,
   onEntitySelect,
   selectedEntity,
   onRefreshData,
+  centerNodeId,
+  onReturnToFullGraph,
 }: NetworkGraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkEdge> | null>(
@@ -76,7 +218,7 @@ export function NetworkGraphView({
     clusters: 0,
   });
 
-  // Fetch graph data using React Query
+  // Fetch graph data using React Query - either full graph or node-centered
   const {
     data: graphData,
     isLoading,
@@ -84,103 +226,16 @@ export function NetworkGraphView({
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["graph-data", filters],
-    queryFn: () => graphApi.getWholeGraph(filters),
+    queryKey: centerNodeId
+      ? ["node-centered-graph", centerNodeId, filters]
+      : ["graph-data", filters],
+    queryFn: () =>
+      centerNodeId
+        ? graphApi.getNodeCenteredGraph(centerNodeId, filters)
+        : graphApi.getWholeGraph(filters),
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: false,
   });
-
-  // Convert backend data to D3 network format
-  const convertToNetworkData = (graphData: any) => {
-    const nodes: NetworkNode[] = [];
-    const edges: NetworkEdge[] = [];
-    const nodeMap = new Map<string, NetworkNode>();
-
-    // Process clustered entities (from gambling sites)
-    graphData.clusters?.forEach((cluster: any) => {
-      cluster.entities.forEach((backendEntity: EntityNode) => {
-        const entity = convertBackendEntityToFrontend(backendEntity);
-        const node: NetworkNode = {
-          id: backendEntity.id,
-          entity,
-          cluster: cluster.website_name,
-        };
-        nodes.push(node);
-        nodeMap.set(backendEntity.id, node);
-      });
-
-      // Create edges between entities in the same cluster (gambling site)
-      if (cluster.entities.length > 1) {
-        for (let i = 0; i < cluster.entities.length; i++) {
-          for (let j = i + 1; j < cluster.entities.length; j++) {
-            edges.push({
-              source: cluster.entities[i].id,
-              target: cluster.entities[j].id,
-              strength: 0.3,
-              type: "same_site",
-            });
-          }
-        }
-      }
-    });
-
-    // Process standalone entities
-    graphData.standalone_entities?.forEach((backendEntity: EntityNode) => {
-      const entity = convertBackendEntityToFrontend(backendEntity);
-      const node: NetworkNode = {
-        id: backendEntity.id,
-        entity,
-        cluster: "standalone",
-      };
-      nodes.push(node);
-      nodeMap.set(backendEntity.id, node);
-    });
-
-    // Create additional edges based on connections (this would be enhanced with actual transaction data)
-    nodes.forEach((node) => {
-      if (node.entity.connections > 0) {
-        // For now, create some connections based on priority scores and entity types
-        const potentialConnections = nodes.filter(
-          (otherNode) =>
-            otherNode.id !== node.id &&
-            otherNode.entity.type === node.entity.type &&
-            Math.abs(
-              otherNode.entity.priorityScore - node.entity.priorityScore
-            ) < 20
-        );
-
-        // Add a few connections randomly
-        const numConnections = Math.min(
-          Math.floor(Math.random() * 3) + 1,
-          potentialConnections.length
-        );
-
-        for (let i = 0; i < numConnections; i++) {
-          const target =
-            potentialConnections[
-              Math.floor(Math.random() * potentialConnections.length)
-            ];
-          if (
-            target &&
-            !edges.some(
-              (e) =>
-                (e.source === node.id && e.target === target.id) ||
-                (e.source === target.id && e.target === node.id)
-            )
-          ) {
-            edges.push({
-              source: node.id,
-              target: target.id,
-              strength: 0.6,
-              type: "connected",
-            });
-          }
-        }
-      }
-    });
-
-    return { nodes, edges };
-  };
 
   // Handle refresh
   const handleRefresh = () => {
@@ -230,9 +285,10 @@ export function NetworkGraphView({
         "link",
         d3
           .forceLink(edges)
-          .id((d: any) => d.id)
-          .distance((d: any) => {
-            switch (d.type) {
+          .id((d) => (d as NetworkNode).id)
+          .distance((d) => {
+            const edge = d as NetworkEdge;
+            switch (edge.type) {
               case "same_site":
                 return 80;
               case "transaction":
@@ -243,7 +299,7 @@ export function NetworkGraphView({
                 return 100;
             }
           })
-          .strength((d: any) => d.strength)
+          .strength((d) => (d as NetworkEdge).strength)
       )
       .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2))
@@ -346,18 +402,22 @@ export function NetworkGraphView({
     // Update positions on simulation tick
     simulation.on("tick", () => {
       link
-        .attr("x1", (d: any) => d.source.x)
-        .attr("y1", (d: any) => d.source.y)
-        .attr("x2", (d: any) => d.target.x)
-        .attr("y2", (d: any) => d.target.y);
+        .attr("x1", (d) => (d.source as NetworkNode).x || 0)
+        .attr("y1", (d) => (d.source as NetworkNode).y || 0)
+        .attr("x2", (d) => (d.target as NetworkNode).x || 0)
+        .attr("y2", (d) => (d.target as NetworkNode).y || 0);
 
-      node.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
+      node.attr(
+        "transform",
+        (d) =>
+          `translate(${(d as NetworkNode).x || 0},${(d as NetworkNode).y || 0})`
+      );
     });
 
     return () => {
       simulation.stop();
     };
-  }, [graphData, onEntitySelect]);
+  }, [graphData, onEntitySelect, isLoading]);
 
   // Update selected node styling
   useEffect(() => {
@@ -378,12 +438,13 @@ export function NetworkGraphView({
   };
 
   const getEntityColor = (entity: Entity) => {
-    const typeColors = {
+    const typeColors: Record<string, string> = {
       bank_account: "#1e3a8a", // blue-800
       e_wallet: "#7c3aed", // violet-600
       crypto_wallet: "#f59e0b", // amber-500
       phone_number: "#8b5cf6", // violet-500
       qris: "#f59e0b", // amber-500
+      others: "#6b7280", // gray-500
     };
     return typeColors[entity.type] || "#6b7280";
   };
@@ -437,6 +498,21 @@ export function NetworkGraphView({
     <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
       {/* Graph Controls */}
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 flex gap-2">
+        {/* Return to Full Graph Button - only show in node-centered mode */}
+        {centerNodeId && onReturnToFullGraph && (
+          <Card className="p-2 bg-blue-900/90 border-blue-700 backdrop-blur">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onReturnToFullGraph}
+              className="text-blue-300 hover:text-white hover:bg-blue-800 px-3"
+            >
+              <Network className="h-4 w-4 mr-2" />
+              Back to Full Graph
+            </Button>
+          </Card>
+        )}
+
         <Card className="p-2 bg-black/90 border-gray-700 backdrop-blur">
           <div className="flex gap-1">
             <Button
@@ -493,6 +569,20 @@ export function NetworkGraphView({
           </div>
         </Card>
       </div>
+
+      {/* Node-Centered Mode Indicator */}
+      {centerNodeId && selectedEntity && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
+          <Card className="p-3 bg-amber-900/90 border-amber-700 backdrop-blur">
+            <div className="text-sm text-center text-amber-200">
+              <div className="font-medium">Node-Centered View</div>
+              <div className="text-xs">
+                Showing network around: {selectedEntity.identifier}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Graph Stats */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">

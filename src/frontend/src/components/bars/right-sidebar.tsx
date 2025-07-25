@@ -46,20 +46,6 @@ interface RightSidebarProps {
   onRefreshData?: () => void;
 }
 
-const recentSearches = [
-  "1234567890123456",
-  "0812345678901234",
-  "MRC001234567890",
-  "6281234567890",
-];
-
-const quickStats = [
-  { label: "High Priority Entities", value: "89", color: "text-red-400" },
-  { label: "Active Investigations", value: "23", color: "text-gray-300" },
-  { label: "Flagged Today", value: "12", color: "text-orange-400" },
-  { label: "Reports Generated", value: "7", color: "text-green-400" },
-];
-
 export function RightSidebar({
   filters,
   onFiltersChange,
@@ -123,13 +109,6 @@ export function RightSidebar({
     return "all";
   };
 
-  const handleRecentSearchClick = (searchQuery: string) => {
-    setSearchInput(searchQuery);
-    onFiltersChange({
-      ...filters,
-      search_query: searchQuery,
-    });
-  };
 
   const clearAllFilters = () => {
     setSearchInput("");
@@ -263,7 +242,7 @@ export function RightSidebar({
                           </CardContent>
                         </Card>
 
-                        <Card className="bg-gray-900/50 border-gray-700">
+                        {/* <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400">
                               Recent Searches
@@ -312,7 +291,7 @@ export function RightSidebar({
                               ))}
                             </div>
                           </CardContent>
-                        </Card>
+                        </Card> */}
                       </TabsContent>
 
                       <TabsContent value="filters" className="space-y-4 mt-0">

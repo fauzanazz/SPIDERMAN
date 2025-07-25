@@ -5,6 +5,7 @@ const EntityType = {
   E_WALLET: "e_wallet",
   PHONE_NUMBER: "phone_number",
   QRIS: "qris",
+  OTHERS: "others",
 } as const;
 type EntityType = (typeof EntityType)[keyof typeof EntityType];
 
@@ -34,7 +35,8 @@ type Entity = {
     | EWalletProvider
     | PhoneProvider
     | QRISProvider
-    | CryptoProvider;
+    | CryptoProvider
+    | Others;
   priorityScore: number;
   connections: number;
   lastActivity?: string;
@@ -50,7 +52,7 @@ type Entity = {
   cryptocurrency?: string;
   wallet_type?: string;
   phone_provider?: string;
-  additional_info?: Record<string, any>;
+  additional_info?: Record<string, string | string[]>; // Any other backend-specific fields
 };
 
 const SpecificEntityInformation = {
@@ -71,6 +73,7 @@ const SpecificEntityInformation = {
   [EntityType.PHONE_NUMBER]: ["Simpati", "XL"],
   [EntityType.QRIS]: ["QRIS"],
   [EntityType.CRYPTO_WALLET]: ["Bitcoin", "Ethereum", "USDT", "USDC", "BNB"],
+  [EntityType.OTHERS]: ["Others"],
 } as const;
 
 type SpecificEntityInformationType = typeof SpecificEntityInformation;
@@ -84,16 +87,37 @@ type QRISProvider =
   SpecificEntityInformationType[typeof EntityType.QRIS][number];
 type CryptoProvider =
   SpecificEntityInformationType[typeof EntityType.CRYPTO_WALLET][number];
+type Others = SpecificEntityInformationType[typeof EntityType.OTHERS][number];
 
-// Helper function to convert backend EntityNode to frontend Entity
-export function convertBackendEntityToFrontend(backendEntity: any): Entity {
+export type BackendEntity = {
+  id: string;
+  identifier: string;
+  entity_type: EntityType;
+  account_holder: string;
+  bank_name?: BankAccountProvider;
+  cryptocurrency?: CryptoProvider;
+  wallet_type?: EWalletProvider;
+  phone_provider?: PhoneProvider;
+  priority_score: number;
+  connections: number;
+  last_activity?: string;
+  created_at?: string;
+  transactions: number;
+  total_amount: number;
+  connected_entities: Entity[]; // Will be populated separately
+  additional_info?: Record<string, string | string[]>; // Any other backend-specific fields
+};
+export function convertBackendEntityToFrontend(
+  backendEntity: BackendEntity
+): Entity {
   // Determine specificInformation based on entity type
   let specificInformation:
     | BankAccountProvider
     | EWalletProvider
     | PhoneProvider
     | QRISProvider
-    | CryptoProvider;
+    | CryptoProvider
+    | Others;
 
   switch (backendEntity.entity_type) {
     case "bank_account":
@@ -116,13 +140,13 @@ export function convertBackendEntityToFrontend(backendEntity: any): Entity {
         "Unknown") as CryptoProvider;
       break;
     default:
-      specificInformation = "Unknown" as any;
+      specificInformation = "Others" as Others; // Default case for any other types
   }
 
   return {
     id: backendEntity.id,
     identifier: backendEntity.identifier,
-    location: "Unknown", // Default since backend doesn't provide this
+    location: "Unknown", 
     name: backendEntity.account_holder,
     accountHolder: backendEntity.account_holder,
     type: backendEntity.entity_type,
@@ -140,7 +164,6 @@ export function convertBackendEntityToFrontend(backendEntity: any): Entity {
     linkedEntities: [], // Will be populated separately
     recentActivity: [], // Will be populated from transaction history
 
-    // Backend-specific fields
     bank_name: backendEntity.bank_name,
     cryptocurrency: backendEntity.cryptocurrency,
     wallet_type: backendEntity.wallet_type,

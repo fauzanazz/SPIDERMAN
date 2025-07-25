@@ -3,7 +3,6 @@
 
 import type { Entity } from "@/lib/types/entity";
 import type { GraphFilters } from "@/lib/api/graph-api";
-import { GeospatialMapView } from "./geospatial-map-view";
 import { NetworkGraphView } from "./network-graph-view";
 
 interface MainViewProps {
@@ -26,6 +25,8 @@ interface MainViewProps {
   onEntitySelect: (entity: Entity) => void;
   selectedEntity: Entity | null;
   onRefreshData?: () => void;
+  centerNodeId?: string;
+  onReturnToFullGraph?: () => void;
 }
 
 export function MainView({
@@ -35,6 +36,8 @@ export function MainView({
   onEntitySelect,
   selectedEntity,
   onRefreshData,
+  centerNodeId,
+  onReturnToFullGraph,
 }: MainViewProps) {
   // Use backend filters if available, otherwise convert legacy filters
   const activeFilters: GraphFilters = backendFilters || {
@@ -56,6 +59,8 @@ export function MainView({
           onEntitySelect={onEntitySelect}
           selectedEntity={selectedEntity}
           onRefreshData={onRefreshData}
+          centerNodeId={centerNodeId}
+          onReturnToFullGraph={onReturnToFullGraph}
         />
       ) : (
         <></>
