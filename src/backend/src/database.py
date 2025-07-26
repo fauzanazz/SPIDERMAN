@@ -1,8 +1,9 @@
 from neo4j import GraphDatabase
 import os
+import random
 import logging
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 from .model import BankAccount, CryptoWallet, DigitalWallet, GamblingSiteData, PaymentGateway
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class Neo4jHandler:
         if self._uri is None:
             self._uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
             self._username = os.getenv("NEO4J_USERNAME", "neo4j")
-            self._password = os.getenv("NEO4J_PASSWORD")
+            self._password = os.getenv("NEO4J_PASSWORD", "your_password")
             
             if not self._password:
                 # Log available environment variables for debugging
@@ -432,5 +433,456 @@ class Neo4jHandler:
         except Exception as e:
             logger.error(f"Error querying site statistics: {e}")
             return {}
+        
+
+    def seed_test_data(self, num_nodes=100):
+        """
+        Seed the database with realistic test data including:
+        - Multiple gambling sites with clustered entities
+        - Various entity types (bank accounts, crypto wallets, e-wallets, etc.)
+        - Realistic Indonesian bank distribution (BCA heavy)
+        - Transaction relationships between entities
+        """
+        if not self._check_connection():
+            logger.warning("Cannot seed data - database not connected")
+            return False
+            
+        logger.info(f"🌱 Starting database seeding with {num_nodes} nodes...")
+        
+        # Define realistic test data
+        gambling_sites = [
+            {"url": "https://judibola88.com", "name": "JudiBola88"},
+            {"url": "https://slotgacor99.net", "name": "SlotGacor99"}, 
+            {"url": "https://togelking777.id", "name": "TogelKing777"},
+            {"url": "https://casinolive123.co", "name": "CasinoLive123"},
+            {"url": "https://pokerindo88.org", "name": "PokerIndo88"},
+            {"url": "https://sportbet365.vip", "name": "SportBet365"},
+            {"url": "https://slotmania77.net", "name": "SlotMania77"}
+        ]
+        
+        # Indonesian banks with realistic distribution (BCA heavy as requested)
+        bank_distribution = {
+            "BCA": 30,  # 30% of bank accounts
+            "BRI": 20,
+            "BNI": 15, 
+            "Mandiri": 15,
+            "CIMB Niaga": 8,
+            "Danamon": 5,
+            "BTN": 4,
+            "Permata": 3
+        }
+        
+        # E-wallet types
+        ewallet_types = ["OVO", "DANA", "GoPay", "LinkAja", "ShopeePay"]
+        
+        # Crypto currencies
+        crypto_currencies = ["Bitcoin", "Ethereum", "USDT", "USDC", "BNB", "Dogecoin"]
+        
+        # Phone providers
+        phone_providers = ["Telkomsel", "XL", "Indosat", "Tri", "Smartfren"]
+        
+        # Indonesian names for realistic account holders
+        indonesian_names = [
+            "Ahmad Suryanto", "Budi Prasetyo", "Siti Nurhaliza", "Dewi Sartika",
+            "Rizky Pratama", "Maya Sari", "Andi Wijaya", "Lina Marlina",
+            "Hendra Gunawan", "Ratna Wati", "Agus Salim", "Indira Putri",
+            "Bambang Hartono", "Sari Dewi", "Dedi Kurniawan", "Rina Susanti",
+            "Fajar Nugroho", "Lisa Permata", "Joko Widodo", "Mega Wati",
+            "Rudi Hartanto", "Nina Sari", "Eko Prasetyo", "Dian Sastro",
+            "Wawan Setiawan", "Yuli Rachmawati", "Anton Sinaga", "Evi Tamala",
+            "Dody Iskandar", "Fitri Handayani", "Gilang Ramadhan", "Sinta Nurjanah",
+            "Hendro Siahaan", "Kartika Sari", "Ivan Gunawan", "Josephine Joni",
+            "Krisna Mukti", "Lestari Moerdani", "Made Artawan", "Novita Angie"
+        ]
+        
+        try:
+            with self.driver.session() as session:
+                # Clear existing test data (except schema samples)
+                logger.info("🧹 Clearing existing test data...")
+                clear_query = """
+                MATCH (n)
+                WHERE NOT n.is_schema_sample = true
+                DETACH DELETE n
+                """
+                session.run(clear_query)
+                
+                # Create gambling sites
+                logger.info("🎰 Creating gambling sites...")
+                for site in gambling_sites:
+                    site_query = """
+                    MERGE (g:SitusJudi {url: $url})
+                    SET g.nama = $nama,
+                        g.waktu_ekstraksi = $waktu,
+                        g.original_url = $url,
+                        g.site_language = 'Indonesian',
+                        g.registration_success = true,
+                        g.is_test_data = true
+                    """
+                    session.run(site_query, {
+                        "url": site["url"],
+                        "nama": site["name"],
+                        "waktu": datetime.now().isoformat()
+                    })
+                
+                logger.info(f"✅ Created {len(gambling_sites)} gambling sites")
+                
+                # Calculate entity distribution
+                bank_accounts_count = int(num_nodes * 0.5)  # 50% bank accounts
+                crypto_wallets_count = int(num_nodes * 0.2)  # 20% crypto wallets
+                ewallets_count = int(num_nodes * 0.15)  # 15% e-wallets
+                phone_numbers_count = int(num_nodes * 0.1)  # 10% phone numbers
+                qris_codes_count = int(num_nodes * 0.05)  # 5% QRIS codes
+                
+                created_entities = []
+                
+                # Create bank accounts with BCA heavy distribution
+                logger.info(f"🏦 Creating {bank_accounts_count} bank accounts...")
+                for i in range(bank_accounts_count):
+                    # Select bank based on distribution
+                    rand = random.random() * 100
+                    cumulative = 0
+                    selected_bank = "BCA"  # default
+                    
+                    for bank, percentage in bank_distribution.items():
+                        cumulative += percentage
+                        if rand <= cumulative:
+                            selected_bank = bank
+                            break
+                    
+                    account_number = f"{random.randint(1000000000, 9999999999)}"
+                    account_holder = random.choice(indonesian_names)
+                    
+                    # Assign to random gambling sites (some accounts used by multiple sites)
+                    sites_using = random.sample(gambling_sites, random.randint(1, 3))
+                    
+                    account_query = """
+                    MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
+                    SET a.jenis_akun = 'CHECKING',
+                        a.nama_bank = $nama_bank,
+                        a.pemilik_rekening = $pemilik_rekening,
+                        a.terakhir_update = $waktu,
+                        a.priority_score = $priority_score,
+                        a.is_test_data = true
+                    """
+                    
+                    session.run(account_query, {
+                        "nomor_rekening": account_number,
+                        "nama_bank": selected_bank,
+                        "pemilik_rekening": account_holder,
+                        "waktu": datetime.now().isoformat(),
+                        "priority_score": random.randint(0, 100)
+                    })
+                    
+                    # Create relationships to gambling sites
+                    for site in sites_using:
+                        rel_query = """
+                        MATCH (g:SitusJudi {url: $site_url})
+                        MATCH (a:AkunMencurigakan {nomor_rekening: $account_number})
+                        MERGE (g)-[:MENGGUNAKAN_REKENING]->(a)
+                        """
+                        session.run(rel_query, {
+                            "site_url": site["url"],
+                            "account_number": account_number
+                        })
+                    
+                    created_entities.append({
+                        "type": "AkunMencurigakan",
+                        "identifier": account_number,
+                        "holder": account_holder
+                    })
+                
+                logger.info(f"✅ Created {bank_accounts_count} bank accounts")
+                
+                # Create crypto wallets
+                logger.info(f"₿ Creating {crypto_wallets_count} crypto wallets...")
+                for i in range(crypto_wallets_count):
+                    # Generate realistic wallet address
+                    if random.choice([True, False]):
+                        # Bitcoin-style address
+                        wallet_address = "1" + "".join(random.choices("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz", k=33))
+                    else:
+                        # Ethereum-style address
+                        wallet_address = "0x" + "".join(random.choices("0123456789abcdef", k=40))
+                    
+                    cryptocurrency = random.choice(crypto_currencies)
+                    holder = random.choice(indonesian_names)
+                    
+                    sites_using = random.sample(gambling_sites, random.randint(1, 2))
+                    
+                    wallet_query = """
+                    MERGE (c:CryptoWallet {alamat_wallet: $alamat_wallet})
+                    SET c.cryptocurrency = $cryptocurrency,
+                        c.terakhir_update = $waktu,
+                        c.account_holder = $holder,
+                        c.priority_score = $priority_score,
+                        c.is_test_data = true
+                    """
+                    
+                    session.run(wallet_query, {
+                        "alamat_wallet": wallet_address,
+                        "cryptocurrency": cryptocurrency,
+                        "waktu": datetime.now().isoformat(),
+                        "holder": holder,
+                        "priority_score": random.randint(0, 100)
+                    })
+                    
+                    # Create relationships to gambling sites
+                    for site in sites_using:
+                        rel_query = """
+                        MATCH (g:SitusJudi {url: $site_url})
+                        MATCH (c:CryptoWallet {alamat_wallet: $wallet_address})
+                        MERGE (g)-[:MENGGUNAKAN_CRYPTO]->(c)
+                        """
+                        session.run(rel_query, {
+                            "site_url": site["url"],
+                            "wallet_address": wallet_address
+                        })
+                    
+                    created_entities.append({
+                        "type": "CryptoWallet",
+                        "identifier": wallet_address,
+                        "holder": holder
+                    })
+                
+                logger.info(f"✅ Created {crypto_wallets_count} crypto wallets")
+                
+                # Create e-wallets
+                logger.info(f"📱 Creating {ewallets_count} e-wallets...")
+                for i in range(ewallets_count):
+                    wallet_number = f"08{random.randint(1000000000, 9999999999)}"
+                    wallet_type = random.choice(ewallet_types)
+                    holder = random.choice(indonesian_names)
+                    
+                    sites_using = random.sample(gambling_sites, random.randint(1, 2))
+                    
+                    ewallet_query = """
+                    MERGE (e:EWallet {wallet_number: $wallet_number})
+                    SET e.wallet_type = $wallet_type,
+                        e.account_holder = $holder,
+                        e.terakhir_update = $waktu,
+                        e.priority_score = $priority_score,
+                        e.is_test_data = true
+                    """
+                    
+                    session.run(ewallet_query, {
+                        "wallet_number": wallet_number,
+                        "wallet_type": wallet_type,
+                        "holder": holder,
+                        "waktu": datetime.now().isoformat(),
+                        "priority_score": random.randint(0, 100)
+                    })
+                    
+                    # Note: E-wallets don't have direct relationships to gambling sites in your current schema
+                    # But we'll create some payment method relationships
+                    for site in sites_using:
+                        # Create payment method
+                        payment_query = """
+                        MATCH (g:SitusJudi {url: $site_url})
+                        MERGE (p:MetodePembayaran {provider: $provider})
+                        SET p.terakhir_update = $waktu,
+                            p.is_test_data = true
+                        MERGE (g)-[:MENERIMA_PEMBAYARAN]->(p)
+                        """
+                        session.run(payment_query, {
+                            "site_url": site["url"],
+                            "provider": wallet_type,
+                            "waktu": datetime.now().isoformat()
+                        })
+                    
+                    created_entities.append({
+                        "type": "EWallet", 
+                        "identifier": wallet_number,
+                        "holder": holder
+                    })
+                
+                logger.info(f"✅ Created {ewallets_count} e-wallets")
+                
+                # Create phone numbers
+                logger.info(f"📞 Creating {phone_numbers_count} phone numbers...")
+                for i in range(phone_numbers_count):
+                    phone_number = f"08{random.randint(1000000000, 9999999999)}"
+                    phone_provider = random.choice(phone_providers)
+                    holder = random.choice(indonesian_names)
+                    
+                    phone_query = """
+                    MERGE (p:PhoneNumber {phone_number: $phone_number})
+                    SET p.phone_provider = $phone_provider,
+                        p.account_holder = $holder,
+                        p.terakhir_update = $waktu,
+                        p.priority_score = $priority_score,
+                        p.is_test_data = true
+                    """
+                    
+                    session.run(phone_query, {
+                        "phone_number": phone_number,
+                        "phone_provider": phone_provider,
+                        "holder": holder,
+                        "waktu": datetime.now().isoformat(),
+                        "priority_score": random.randint(0, 100)
+                    })
+                    
+                    created_entities.append({
+                        "type": "PhoneNumber",
+                        "identifier": phone_number,
+                        "holder": holder
+                    })
+                
+                logger.info(f"✅ Created {phone_numbers_count} phone numbers")
+                
+                # Create QRIS codes
+                logger.info(f"📱 Creating {qris_codes_count} QRIS codes...")
+                for i in range(qris_codes_count):
+                    qris_code = f"QRIS{random.randint(100000, 999999)}"
+                    holder = random.choice(indonesian_names)
+                    
+                    qris_query = """
+                    MERGE (q:QRISCode {qris_code: $qris_code})
+                    SET q.account_holder = $holder,
+                        q.terakhir_update = $waktu,
+                        q.priority_score = $priority_score,
+                        q.is_test_data = true
+                    """
+                    
+                    session.run(qris_query, {
+                        "qris_code": qris_code,
+                        "holder": holder,
+                        "waktu": datetime.now().isoformat(),
+                        "priority_score": random.randint(0, 100)
+                    })
+                    
+                    created_entities.append({
+                        "type": "QRISCode",
+                        "identifier": qris_code,
+                        "holder": holder
+                    })
+                
+                logger.info(f"✅ Created {qris_codes_count} QRIS codes")
+                
+                # Create realistic transactions between entities
+                logger.info("💸 Creating transaction relationships...")
+                num_transactions = random.randint(50, 150)  # Random number of transactions
+                
+                for i in range(num_transactions):
+                    # Select random source and destination entities
+                    from_entity = random.choice(created_entities)
+                    to_entity = random.choice(created_entities)
+                    
+                    # Don't create transaction to self
+                    if from_entity["identifier"] == to_entity["identifier"]:
+                        continue
+                    
+                    # Generate realistic transaction data
+                    amount = round(random.uniform(50000, 10000000), 2)  # 50k to 10M IDR
+                    days_ago = random.randint(0, 365)
+                    transaction_date = datetime.now() - timedelta(days=days_ago)
+                    
+                    transaction_types = ["deposit", "withdrawal", "transfer", "payment"]
+                    transaction_type = random.choice(transaction_types)
+                    
+                    # Create transaction using the same logic as your graph database
+                    transaction_query = """
+                    MATCH (from_entity), (to_entity)
+                    WHERE (
+                        from_entity.nomor_rekening = $from_identifier OR
+                        from_entity.alamat_wallet = $from_identifier OR  
+                        from_entity.wallet_number = $from_identifier OR
+                        from_entity.phone_number = $from_identifier OR
+                        from_entity.qris_code = $from_identifier
+                    ) AND (
+                        to_entity.nomor_rekening = $to_identifier OR
+                        to_entity.alamat_wallet = $to_identifier OR
+                        to_entity.wallet_number = $to_identifier OR  
+                        to_entity.phone_number = $to_identifier OR
+                        to_entity.qris_code = $to_identifier
+                    )
+                    CREATE (from_entity)-[t:TRANSFERS_TO {
+                        amount: $amount,
+                        timestamp: $timestamp,
+                        transaction_type: $transaction_type,
+                        reference: $reference,
+                        is_test_data: true
+                    }]->(to_entity)
+                    """
+                    
+                    try:
+                        session.run(transaction_query, {
+                            "from_identifier": from_entity["identifier"],
+                            "to_identifier": to_entity["identifier"],
+                            "amount": amount,
+                            "timestamp": transaction_date.isoformat(),
+                            "transaction_type": transaction_type,
+                            "reference": f"TXN{random.randint(100000, 999999)}"
+                        })
+                    except Exception as e:
+                        # Some transactions might fail due to identifier conflicts, that's ok
+                        logger.debug(f"Transaction creation failed (expected): {e}")
+                        continue
+                
+                logger.info(f"✅ Created up to {num_transactions} transaction relationships")
+                
+                # Get final counts
+                count_query = """
+                MATCH (n) 
+                WHERE n.is_test_data = true
+                RETURN labels(n)[0] as label, count(n) as count
+                """
+                
+                result = session.run(count_query)
+                counts = {record["label"]: record["count"] for record in result}
+                
+                # Count relationships
+                rel_count_query = """
+                MATCH ()-[r]->() 
+                WHERE r.is_test_data = true OR 
+                    EXISTS((r)<-[:MENGGUNAKAN_REKENING|MENGGUNAKAN_CRYPTO|MENERIMA_PEMBAYARAN]-(:SitusJudi {is_test_data: true}))
+                RETURN type(r) as rel_type, count(r) as count
+                """
+                
+                rel_result = session.run(rel_count_query)
+                rel_counts = {record["rel_type"]: record["count"] for record in rel_result}
+                
+                logger.info("🎉 Database seeding completed successfully!")
+                logger.info(f"📊 Created nodes: {counts}")
+                logger.info(f"🔗 Created relationships: {rel_counts}")
+                
+                return {
+                    "success": True,
+                    "nodes_created": counts,
+                    "relationships_created": rel_counts,
+                    "total_nodes": sum(counts.values()),
+                    "gambling_sites": len(gambling_sites)
+                }
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to seed database: {e}")
+            import traceback
+            logger.error(f"📍 Traceback: {traceback.format_exc()}")
+            return {"success": False, "error": str(e)}
+
+    def clear_test_data(self):
+        """
+        Clear all test data from the database (keeps schema samples)
+        """
+        if not self._check_connection():
+            logger.warning("Cannot clear test data - database not connected")
+            return False
+            
+        logger.info("🧹 Clearing all test data...")
+        
+        try:
+            with self.driver.session() as session:
+                clear_query = """
+                MATCH (n)
+                WHERE n.is_test_data = true
+                DETACH DELETE n
+                """
+                
+                result = session.run(clear_query)
+                logger.info("✅ Test data cleared successfully")
+                return True
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to clear test data: {e}")
+            return False
 
 db_handler = Neo4jHandler() 

@@ -1,6 +1,8 @@
 from ast import List
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fastapi.middleware.cors import CORSMiddleware
 from celery.result import AsyncResult
@@ -12,6 +14,7 @@ from weasyprint import HTML, CSS
 from .storage import storage_manager
 from jinja2 import Environment, FileSystemLoader
 from typing import List
+
 
 from typing import Optional
 from .graph_schema import (
@@ -45,10 +48,34 @@ logger = logging.getLogger(__name__)
 
 env = Environment(loader=FileSystemLoader("templates"))
 
+load_dotenv() 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Attempting to connect to Neo4j database...")
     connection_success = db_handler.connect(max_retries=15, retry_delay=3)
+
+    auto_seed = os.getenv("AUTO_SEED", "false").lower() == "true"
+    logger.info(os.getenv('GOOGLE_API_KEY'))
+    if auto_seed:
+        logger.info("🌱 AUTO_SEED enabled - checking if database needs seeding...")
+        
+        # Check if test data already exists
+        with db_handler.driver.session() as session:
+            check_query = "MATCH (n {is_test_data: true}) RETURN count(n) as count"
+            result = session.run(check_query)
+            existing_test_nodes = result.single()["count"]
+            
+            if existing_test_nodes == 0:
+                logger.info("🌱 Database appears empty, auto-seeding with test data...")
+                seed_result = db_handler.seed_test_data(100)
+                
+                if seed_result["success"]:
+                    logger.info(f"✅ Auto-seeding completed: {seed_result['total_nodes']} nodes created")
+                else:
+                    logger.warning(f"⚠️  Auto-seeding failed: {seed_result.get('error', 'Unknown error')}")
+            else:
+                logger.info(f"🌱 Found {existing_test_nodes} existing test nodes, skipping auto-seed")
     
     if connection_success:
         try:
@@ -631,6 +658,161 @@ async def bulk_create_entities(entities: List[NodeCreate]):
         logger.error(f"Error in bulk entity creation: {e}")
         raise HTTPException(status_code=500, detail=f"Bulk operation failed: {str(e)}")
 
+## For seeding
+# Add these endpoints to your src/backend/src/main.py
+
+@app.post("/dev/seed-database")
+async def seed_database(num_nodes: int = 100):
+    """
+    Seed the database with realistic test data for development and testing.
+    
+    This creates:
+    - Multiple gambling sites with clustered entities
+    - Bank accounts (50% of nodes, BCA heavy distribution)
+    - Crypto wallets (20% of nodes) 
+    - E-wallets (15% of nodes)
+    - Phone numbers (10% of nodes)
+    - QRIS codes (5% of nodes)
+    - Realistic transaction relationships between entities
+    """
+    try:
+        if not db_handler._check_connection():
+            raise HTTPException(status_code=503, detail="Database not connected")
+        
+        if num_nodes < 10 or num_nodes > 1000:
+            raise HTTPException(status_code=400, detail="num_nodes must be between 10 and 1000")
+        
+        logger.info(f"🌱 Starting database seeding with {num_nodes} nodes...")
+        result = db_handler.seed_test_data(num_nodes)
+        
+        if result["success"]:
+            return {
+                "status": "success",
+                "message": f"Database seeded successfully with {result['total_nodes']} nodes",
+                "details": {
+                    "nodes_created": result["nodes_created"],
+                    "relationships_created": result["relationships_created"],
+                    "gambling_sites": result["gambling_sites"]
+                },
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=500, detail=f"Seeding failed: {result.get('error', 'Unknown error')}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error seeding database: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to seed database: {str(e)}")
+
+@app.delete("/dev/clear-test-data")
+async def clear_test_data():
+    """
+    Clear all test data from the database.
+    
+    This removes all nodes and relationships marked as test data,
+    but preserves schema samples and real data.
+    """
+    try:
+        if not db_handler._check_connection():
+            raise HTTPException(status_code=503, detail="Database not connected")
+        
+        success = db_handler.clear_test_data()
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Test data cleared successfully",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to clear test data")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error clearing test data: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear test data: {str(e)}")
+
+@app.get("/dev/test-data-stats")
+async def get_test_data_stats():
+    """
+    Get statistics about the test data in the database.
+    """
+    try:
+        if not db_handler._check_connection():
+            raise HTTPException(status_code=503, detail="Database not connected")
+        
+        with db_handler.driver.session() as session:
+            # Count test data nodes
+            node_count_query = """
+            MATCH (n) 
+            WHERE n.is_test_data = true
+            RETURN labels(n)[0] as label, count(n) as count
+            ORDER BY count DESC
+            """
+            
+            node_result = session.run(node_count_query)
+            node_counts = {record["label"]: record["count"] for record in node_result}
+            
+            # Count test data relationships  
+            rel_count_query = """
+            MATCH ()-[r]->() 
+            WHERE r.is_test_data = true
+            RETURN type(r) as rel_type, count(r) as count
+            ORDER BY count DESC
+            """
+            
+            rel_result = session.run(rel_count_query)
+            rel_counts = {record["rel_type"]: record["count"] for record in rel_result}
+            
+            # Get gambling site relationships
+            site_rel_query = """
+            MATCH (site:SitusJudi {is_test_data: true})-[r]->(entity)
+            RETURN site.nama as site_name, type(r) as rel_type, count(r) as count
+            ORDER BY site_name, count DESC
+            """
+            
+            site_rel_result = session.run(site_rel_query)
+            site_relationships = {}
+            for record in site_rel_result:
+                site_name = record["site_name"]
+                if site_name not in site_relationships:
+                    site_relationships[site_name] = {}
+                site_relationships[site_name][record["rel_type"]] = record["count"]
+            
+            # Bank distribution analysis
+            bank_dist_query = """
+            MATCH (a:AkunMencurigakan {is_test_data: true})
+            RETURN a.nama_bank as bank, count(a) as count
+            ORDER BY count DESC
+            """
+            
+            bank_result = session.run(bank_dist_query)
+            bank_distribution = {record["bank"]: record["count"] for record in bank_result}
+            
+            return {
+                "status": "success",
+                "test_data_exists": len(node_counts) > 0,
+                "total_test_nodes": sum(node_counts.values()),
+                "total_test_relationships": sum(rel_counts.values()),
+                "node_counts_by_type": node_counts,
+                "relationship_counts_by_type": rel_counts,
+                "gambling_site_relationships": site_relationships,
+                "bank_distribution": bank_distribution,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting test data stats: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get test data stats: {str(e)}")
+
+@app.post("/dev/quick-seed")
+async def quick_seed():
+    """
+    Quick seed with default 100 nodes for development testing.
+    """
+    return await seed_database(100)
 
 if __name__ == "__main__":
     import uvicorn
