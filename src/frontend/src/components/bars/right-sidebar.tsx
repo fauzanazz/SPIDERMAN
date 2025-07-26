@@ -258,13 +258,13 @@ export function RightSidebar({
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400">
-                              Interaction Mode
+                              Mode Interaksi
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-3">
                             <div className="space-y-2">
                               <Label className="text-gray-400">
-                                Select Mode
+                                Pilih Mode
                               </Label>
                               <div className="grid grid-cols-2 gap-2">
                                 <Button
@@ -299,17 +299,17 @@ export function RightSidebar({
                                   size="sm"
                                 >
                                   <Users className="h-4 w-4" />
-                                  Selection
+                                  Pilihan
                                 </Button>
                               </div>
                               {currentMode === "default" && (
                                 <div className="text-xs text-gray-500">
-                                  Click nodes to view details
+                                  Klik node untuk melihat detail
                                 </div>
                               )}
                               {currentMode === "selection" && (
                                 <div className="text-xs text-gray-500">
-                                  Click nodes to select for batch operations
+                                  Klik node untuk memilih operasi batch
                                 </div>
                               )}
                             </div>
@@ -321,7 +321,7 @@ export function RightSidebar({
                           <Card className="bg-gray-900/50 border-gray-700">
                             <CardHeader className="pb-3">
                               <CardTitle className="text-sm text-gray-400 flex items-center justify-between">
-                                Selected Entities ({selectedEntities.length})
+                                Entitas Dipilih ({selectedEntities.length})
                                 {selectedEntities.length > 0 && (
                                   <Button
                                     variant="ghost"
@@ -337,8 +337,8 @@ export function RightSidebar({
                             <CardContent className="space-y-3">
                               {selectedEntities.length === 0 ? (
                                 <div className="text-xs text-gray-500 text-center py-4">
-                                  No entities selected. Click nodes in the graph
-                                  to select them.
+                                  Tidak ada entitas dipilih. Klik node di graf
+                                  untuk memilihnya.
                                 </div>
                               ) : (
                                 <>
@@ -386,7 +386,7 @@ export function RightSidebar({
                                     size="sm"
                                   >
                                     <Download className="mr-2 h-4 w-4" />
-                                    Generate Batch Report (
+                                    Buat Laporan Batch (
                                     {selectedEntities.length})
                                   </Button>
                                 </>
@@ -408,7 +408,7 @@ export function RightSidebar({
                                       .flat()
                                       .filter(Boolean).length
                                   }{" "}
-                                  active filters
+                                  filter aktif
                                 </div>
                                 <Button
                                   variant="ghost"
@@ -416,7 +416,7 @@ export function RightSidebar({
                                   onClick={clearAllFilters}
                                   className="text-blue-400 hover:text-blue-300 hover:bg-blue-800/20"
                                 >
-                                  Clear All
+                                  Hapus Semua
                                 </Button>
                               </div>
                             </CardContent>
@@ -427,7 +427,7 @@ export function RightSidebar({
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400 text-start">
-                              Entity Filters
+                              Filter Entitas
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
@@ -444,7 +444,7 @@ export function RightSidebar({
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400">
-                              Priority Level
+                              Tingkat Prioritas
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-4">
@@ -453,7 +453,7 @@ export function RightSidebar({
                                 htmlFor="priority-level"
                                 className="text-gray-400"
                               >
-                                Filter by Priority Score
+                                Filter berdasarkan Skor Prioritas
                               </Label>
                               <Select
                                 value={getCurrentPriorityLevel()}
@@ -467,31 +467,31 @@ export function RightSidebar({
                                     value="all"
                                     className="text-white hover:bg-gray-800"
                                   >
-                                    All Levels
+                                    Semua Level
                                   </SelectItem>
                                   <SelectItem
                                     value="critical"
                                     className="text-white hover:bg-gray-800"
                                   >
-                                    Critical (90-100)
+                                    Kritis (90-100)
                                   </SelectItem>
                                   <SelectItem
                                     value="high"
                                     className="text-white hover:bg-gray-800"
                                   >
-                                    High Priority (80-89)
+                                    Prioritas Tinggi (80-89)
                                   </SelectItem>
                                   <SelectItem
                                     value="medium"
                                     className="text-white hover:bg-gray-800"
                                   >
-                                    Medium Priority (60-79)
+                                    Prioritas Sedang (60-79)
                                   </SelectItem>
                                   <SelectItem
                                     value="low"
                                     className="text-white hover:bg-gray-800"
                                   >
-                                    Low Priority (0-59)
+                                    Prioritas Rendah (0-59)
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
@@ -500,12 +500,12 @@ export function RightSidebar({
                             {/* Custom Priority Range */}
                             <div className="space-y-2">
                               <Label className="text-gray-400">
-                                Custom Range
+                                Range Kustom
                               </Label>
                               <div className="flex space-x-2">
                                 <Input
                                   type="number"
-                                  placeholder="Min"
+                                  placeholder="Minimal"
                                   min="0"
                                   max="100"
                                   value={filters.priority_score_min || ""}
@@ -522,7 +522,7 @@ export function RightSidebar({
                                 />
                                 <Input
                                   type="number"
-                                  placeholder="Max"
+                                  placeholder="Maksimal"
                                   min="0"
                                   max="100"
                                   value={filters.priority_score_max || ""}
@@ -548,10 +548,10 @@ export function RightSidebar({
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400">
-                              Start New Analysis
+                              Mulai Analisis Baru
                             </CardTitle>
                             <CardDescription className="text-xs text-gray-500">
-                              Analyze gambling site for suspicious accounts
+                              Analisis situs judi untuk akun yang mencurigakan
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="space-y-3">
@@ -560,12 +560,12 @@ export function RightSidebar({
                                 htmlFor="site-url"
                                 className="text-gray-400"
                               >
-                                Website URL
+                                URL Website
                               </Label>
                               <div className="flex space-x-2">
                                 <Input
                                   id="site-url"
-                                  placeholder="https://example-gambling-site.com"
+                                  placeholder="https://contoh-situs-judi.com"
                                   value={newSiteUrl}
                                   onChange={(e) =>
                                     setNewSiteUrl(e.target.value)
@@ -594,8 +594,8 @@ export function RightSidebar({
                                 </Button>
                               </div>
                               <div className="text-xs text-gray-500">
-                                Enter a gambling website URL to analyze for
-                                suspicious payment accounts
+                                Masukkan URL website judi untuk dianalisis dan
+                                cari akun pembayaran yang mencurigakan
                               </div>
                             </div>
                           </CardContent>
@@ -605,7 +605,7 @@ export function RightSidebar({
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400 flex items-center justify-between">
-                              Active Tasks ({activeTasks.length})
+                              Tugas Aktif ({activeTasks.length})
                               <Button
                                 onClick={onRefreshData}
                                 variant="ghost"
@@ -616,14 +616,14 @@ export function RightSidebar({
                               </Button>
                             </CardTitle>
                             <CardDescription className="text-xs text-gray-500">
-                              Background site analysis operations
+                              Operasi analisis situs latar belakang
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="space-y-3">
                             {activeTasks.length === 0 ? (
                               <div className="text-xs text-gray-500 text-center py-4">
-                                No active tasks. Start a new site analysis
-                                above.
+                                Tidak ada tugas aktif. Mulai analisis situs baru
+                                di atas.
                               </div>
                             ) : (
                               <ScrollArea className="max-h-64">
@@ -645,10 +645,10 @@ export function RightSidebar({
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400">
-                              Data Operations
+                              Operasi Data
                             </CardTitle>
                             <CardDescription className="text-xs text-gray-500">
-                              Manage graph data and refresh
+                              Kelola data graf dan refresh
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="space-y-3">
@@ -658,11 +658,11 @@ export function RightSidebar({
                               size="sm"
                             >
                               <RefreshCw className="mr-2 h-4 w-4" />
-                              Refresh Graph Data
+                              Refresh Data Graf
                             </Button>
 
                             <div className="text-xs text-gray-500 text-center">
-                              Last updated: Just now
+                              Terakhir diperbarui: Baru saja
                             </div>
                           </CardContent>
                         </Card>
@@ -781,7 +781,7 @@ function TaskStatusCard({ task, onRetry }: TaskStatusCardProps) {
         return `Error: ${currentTask.result.error}`;
       }
     }
-    return "Processing...";
+    return "Memproses...";
   };
 
   const getResultSummary = () => {
@@ -792,7 +792,7 @@ function TaskStatusCard({ task, onRetry }: TaskStatusCardProps) {
     ) {
       const result = currentTask.result;
       if ("rekening_ditemukan" in result) {
-        return `Found ${result.rekening_ditemukan} accounts, ${result.crypto_ditemukan || 0} crypto wallets`;
+        return `Ditemukan ${result.rekening_ditemukan} akun, ${result.crypto_ditemukan || 0} dompet kripto`;
       }
     }
     return null;
@@ -821,7 +821,7 @@ function TaskStatusCard({ task, onRetry }: TaskStatusCardProps) {
               <div className="h-2 w-2 rounded-full bg-red-400" />
             )}
             <p className="text-sm font-medium text-white truncate">
-              Site Analysis
+              Analisis Situs
             </p>
           </div>
           <Badge

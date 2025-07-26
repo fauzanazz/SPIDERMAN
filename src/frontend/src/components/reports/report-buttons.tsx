@@ -105,7 +105,7 @@ export function ReportButtons({
     <Card className="bg-gray-900/50 border-gray-700">
       <CardHeader>
         <CardTitle className="text-sm text-gray-400">
-          Report Generation
+          Pembuatan Laporan
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -155,7 +155,7 @@ export function ReportButtons({
           ) : (
             <Download className="mr-2 h-4 w-4" />
           )}
-          Batch by Bank
+          Batch berdasarkan Bank
         </Button>
 
         {/* Report Status Display */}
@@ -164,7 +164,7 @@ export function ReportButtons({
             {isStatusLoading ? (
               <div className="flex items-center">
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                Checking status...
+                Memeriksa status...
               </div>
             ) : reportStatus ? (
               <div>
@@ -177,19 +177,19 @@ export function ReportButtons({
         {/* Success/Error Messages */}
         {singleReportMutation.isSuccess && (
           <div className="text-xs text-green-400">
-            Single report generated successfully!
+            Laporan tunggal berhasil dibuat!
           </div>
         )}
         {batchReportMutation.isSuccess && (
           <div className="text-xs text-green-400">
-            Batch reports generated successfully!
+            Laporan batch berhasil dibuat!
           </div>
         )}
         {(singleReportMutation.isError ||
           batchReportMutation.isError ||
           batchReportByBankMutation.isError) && (
           <div className="text-xs text-red-400">
-            Failed to generate report. Please try again.
+            Gagal membuat laporan. Silakan coba lagi.
           </div>
         )}
       </CardContent>

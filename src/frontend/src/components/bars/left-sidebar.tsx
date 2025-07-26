@@ -181,7 +181,7 @@ export function LeftSidebar({
                         }
                         className="text-xs"
                       >
-                        Priority: {entity.priorityScore}
+                        Prioritas: {entity.priorityScore}
                       </Badge>
                       <Badge
                         variant="outline"
@@ -193,13 +193,13 @@ export function LeftSidebar({
 
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Connections:</span>
+                        <span className="text-gray-400">Koneksi:</span>
                         <span className="font-medium text-white">
                           {entity.connections}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Transactions:</span>
+                        <span className="text-gray-400">Transaksi:</span>
                         <span className="font-medium text-white">
                           {entity.transactions}
                         </span>
@@ -212,7 +212,7 @@ export function LeftSidebar({
                     <div className="p-4 flex items-center justify-center">
                       <div className="flex items-center space-x-2 text-gray-400">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm">Loading details...</span>
+                        <span className="text-sm">Memuat detail...</span>
                       </div>
                     </div>
                   )}
@@ -223,14 +223,14 @@ export function LeftSidebar({
                       <Alert className="bg-red-900/50 border-red-700">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription className="text-red-300">
-                          Failed to load entity details
+                          Gagal memuat detail entitas
                           <Button
                             onClick={() => refetchDetail()}
                             variant="outline"
                             size="sm"
                             className="mt-2 w-full border-red-600 text-red-400 hover:bg-red-800/20"
                           >
-                            Retry
+                            Coba Lagi
                           </Button>
                         </AlertDescription>
                       </Alert>
@@ -248,19 +248,19 @@ export function LeftSidebar({
                           value="details"
                           className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
                         >
-                          Details
+                          Detail
                         </TabsTrigger>
                         <TabsTrigger
                           value="network"
                           className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
                         >
-                          Network
+                          Jaringan
                         </TabsTrigger>
                         <TabsTrigger
                           value="activity"
                           className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
                         >
-                          Activity
+                          Aktivitas
                         </TabsTrigger>
                       </TabsList>
                     </div>
@@ -274,7 +274,7 @@ export function LeftSidebar({
                           <Card className="bg-gray-900/50 border-gray-700">
                             <CardHeader className="pb-3">
                               <CardTitle className="text-sm text-gray-400">
-                                Entity Information
+                                Informasi Entitas
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
@@ -285,7 +285,7 @@ export function LeftSidebar({
                                     {entity.accountHolder}
                                   </p>
                                   <p className="text-xs text-gray-400">
-                                    Account Holder
+                                    Pemegang Akun
                                   </p>
                                 </div>
                               </div>
@@ -297,7 +297,7 @@ export function LeftSidebar({
                                     {entity.identifier}
                                   </p>
                                   <p className="text-xs text-gray-400">
-                                    Identifier
+                                    Identifikasi
                                   </p>
                                 </div>
                               </div>
@@ -325,7 +325,7 @@ export function LeftSidebar({
                                       {entity.cryptocurrency}
                                     </p>
                                     <p className="text-xs text-gray-400">
-                                      Cryptocurrency
+                                      Mata Uang Kripto
                                     </p>
                                   </div>
                                 </div>
@@ -339,7 +339,7 @@ export function LeftSidebar({
                                       {entity.wallet_type}
                                     </p>
                                     <p className="text-xs text-gray-400">
-                                      E-Wallet Type
+                                      Jenis Dompet Digital
                                     </p>
                                   </div>
                                 </div>
@@ -353,7 +353,7 @@ export function LeftSidebar({
                                       {entity.phone_provider}
                                     </p>
                                     <p className="text-xs text-gray-400">
-                                      Provider
+                                      Penyedia
                                     </p>
                                   </div>
                                 </div>
@@ -367,7 +367,7 @@ export function LeftSidebar({
                                       {formatDate(entity.createdAt)}
                                     </p>
                                     <p className="text-xs text-gray-400">
-                                      Created
+                                      Dibuat
                                     </p>
                                   </div>
                                 </div>
@@ -378,14 +378,14 @@ export function LeftSidebar({
                           <Card className="bg-gray-900/50 border-gray-700">
                             <CardHeader className="pb-3">
                               <CardTitle className="text-sm text-gray-400">
-                                Priority Assessment
+                                Penilaian Prioritas
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
                               <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm text-gray-400">
-                                    Overall Priority
+                                    Prioritas Keseluruhan
                                   </span>
                                   <span className="text-sm font-medium text-white">
                                     {entity.priorityScore}/100
@@ -401,7 +401,7 @@ export function LeftSidebar({
                                 <div className="flex items-center gap-2">
                                   <AlertTriangle className="h-4 w-4 text-red-500" />
                                   <span className="text-sm text-red-500">
-                                    High-priority entity detected
+                                    Entitas prioritas tinggi terdeteksi
                                   </span>
                                 </div>
                               )}
@@ -411,7 +411,7 @@ export function LeftSidebar({
                               <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
                                   <span className="text-gray-400">
-                                    Transactions:
+                                    Transaksi:
                                   </span>
                                   <span className="font-medium text-white">
                                     {entity.transactions.toLocaleString()}
@@ -419,7 +419,7 @@ export function LeftSidebar({
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-gray-400">
-                                    Total Amount:
+                                    Total Jumlah:
                                   </span>
                                   <span className="font-medium text-white">
                                     {formatAmount(entity.totalAmount)}
@@ -435,7 +435,7 @@ export function LeftSidebar({
                               <Card className="bg-gray-900/50 border-gray-700">
                                 <CardHeader className="pb-3">
                                   <CardTitle className="text-sm text-gray-400">
-                                    Associated Gambling Sites
+                                    Situs Judi Terkait
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -463,7 +463,7 @@ export function LeftSidebar({
                               size="sm"
                             >
                               <Eye className="mr-2 h-4 w-4" />
-                              Full Profile
+                              Profil Lengkap
                             </Button>
                             <Button
                               variant="outline"
@@ -479,10 +479,10 @@ export function LeftSidebar({
                           <Card className="bg-gray-900/50 border-gray-700">
                             <CardHeader className="pb-3">
                               <CardTitle className="text-sm text-gray-400">
-                                Connected Entities
+                                Entitas Terhubung
                               </CardTitle>
                               <CardDescription className="text-xs text-gray-500">
-                                Entities directly connected to this account
+                                Entitas yang terhubung langsung dengan akun ini
                               </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -550,7 +550,7 @@ export function LeftSidebar({
                                 <div className="text-center py-4">
                                   <Network className="h-8 w-8 text-gray-600 mx-auto mb-2" />
                                   <p className="text-sm text-gray-400">
-                                    No connected entities found
+                                    Tidak ada entitas terhubung yang ditemukan
                                   </p>
                                 </div>
                               )}
@@ -565,10 +565,10 @@ export function LeftSidebar({
                           <Card className="bg-gray-900/50 border-gray-700">
                             <CardHeader className="pb-3">
                               <CardTitle className="text-sm text-gray-400">
-                                Recent Transactions
+                                Transaksi Terkini
                               </CardTitle>
                               <CardDescription className="text-xs text-gray-500">
-                                Latest transaction activity
+                                Aktivitas transaksi terakhir
                               </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -583,7 +583,7 @@ export function LeftSidebar({
                                     0 && (
                                     <div>
                                       <h4 className="text-xs font-medium text-gray-300 mb-2">
-                                        Outgoing (
+                                        Keluar (
                                         {
                                           nodeDetail.outgoing_transactions
                                             .length
@@ -610,7 +610,7 @@ export function LeftSidebar({
                                                 </span>
                                               </div>
                                               <p className="text-xs text-gray-500">
-                                                To: {tx.to_node.substring(0, 8)}
+                                                Ke: {tx.to_node.substring(0, 8)}
                                                 ...
                                               </p>
                                             </div>
@@ -624,7 +624,7 @@ export function LeftSidebar({
                                     0 && (
                                     <div>
                                       <h4 className="text-xs font-medium text-gray-300 mb-2">
-                                        Incoming (
+                                        Masuk (
                                         {
                                           nodeDetail.incoming_transactions
                                             .length
@@ -651,7 +651,7 @@ export function LeftSidebar({
                                                 </span>
                                               </div>
                                               <p className="text-xs text-gray-500">
-                                                From:{" "}
+                                                Dari:{" "}
                                                 {tx.from_node.substring(0, 8)}
                                                 ...
                                               </p>
@@ -668,7 +668,7 @@ export function LeftSidebar({
                                       <div className="text-center py-4">
                                         <Activity className="h-8 w-8 text-gray-600 mx-auto mb-2" />
                                         <p className="text-sm text-gray-400">
-                                          No transactions found
+                                          Tidak ada transaksi ditemukan
                                         </p>
                                       </div>
                                     )}
@@ -677,7 +677,7 @@ export function LeftSidebar({
                                 <div className="text-center py-4">
                                   <Activity className="h-8 w-8 text-gray-600 mx-auto mb-2" />
                                   <p className="text-sm text-gray-400">
-                                    No activity data available
+                                    Tidak ada data aktivitas tersedia
                                   </p>
                                 </div>
                               )}
@@ -695,20 +695,20 @@ export function LeftSidebar({
                       <CreditCard className="h-8 w-8 text-gray-500" />
                     </div>
                     <h3 className="text-lg font-medium text-white mb-2">
-                      No Entity Selected
+                      Tidak Ada Entitas Dipilih
                     </h3>
                     <p className="text-sm text-gray-400 max-w-xs">
-                      Click on a node in the network graph to view detailed
-                      entity information.
+                      Klik pada node di graf jaringan untuk melihat informasi
+                      entitas yang detail.
                     </p>
                   </div>
                   <div className="text-xs text-gray-500">
-                    Select an entity to view:
+                    Pilih entitas untuk melihat:
                     <ul className="mt-2 space-y-1 text-left">
-                      <li>• Detailed entity information</li>
-                      <li>• Connected entities and relationships</li>
-                      <li>• Recent transaction activity</li>
-                      <li>• Associated gambling sites</li>
+                      <li>• Informasi entitas yang detail</li>
+                      <li>• Entitas terhubung dan hubungannya</li>
+                      <li>• Aktivitas transaksi terkini</li>
+                      <li>• Situs judi terkait</li>
                     </ul>
                   </div>
                 </div>

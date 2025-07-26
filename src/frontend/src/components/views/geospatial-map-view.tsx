@@ -129,18 +129,18 @@ export function GeospatialMapView() {
         <Card className="p-3">
           <div className="text-sm space-y-1">
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Locations:</span>
+              <span className="text-muted-foreground">Lokasi:</span>
               <span className="font-medium">{mockLocations.length}</span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Total Entities:</span>
+              <span className="text-muted-foreground">Total Entitas:</span>
               <span className="font-medium">
                 {mockLocations.reduce((sum, loc) => sum + loc.count, 0)}
               </span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">
-                High Priority Areas:
+                Area Prioritas Tinggi:
               </span>
               <span className="font-medium text-red-600">
                 {
@@ -231,7 +231,7 @@ export function GeospatialMapView() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Entities:
+                      Entitas:
                     </span>
                     <span className="text-sm font-medium">
                       {selectedLocation.count}
@@ -239,7 +239,7 @@ export function GeospatialMapView() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Priority Level:
+                      Tingkat Prioritas:
                     </span>
                     <Badge
                       variant={
@@ -255,7 +255,7 @@ export function GeospatialMapView() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Coordinates:
+                      Koordinat:
                     </span>
                     <span className="text-sm font-mono">
                       {selectedLocation.lat.toFixed(4)},{" "}
@@ -264,7 +264,7 @@ export function GeospatialMapView() {
                   </div>
                 </div>
                 <Button className="w-full" size="sm">
-                  View Details
+                  Lihat Detail
                 </Button>
               </div>
             </Card>
@@ -276,18 +276,18 @@ export function GeospatialMapView() {
       <div className="absolute bottom-4 left-4 z-10">
         <Card className="p-3">
           <div className="text-sm space-y-2">
-            <div className="font-medium mb-2">Priority Areas</div>
+            <div className="font-medium mb-2">Area Prioritas</div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-xs">High Priority</span>
+              <span className="text-xs">Prioritas Tinggi</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <span className="text-xs">Medium Priority</span>
+              <span className="text-xs">Prioritas Sedang</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-xs">Low Priority</span>
+              <span className="text-xs">Prioritas Rendah</span>
             </div>
           </div>
         </Card>
@@ -299,10 +299,10 @@ export function GeospatialMapView() {
           <div className="text-center">
             <Map className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
-              No geospatial data available
+              Tidak ada data geospasial tersedia
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              Apply filters to view location-based analysis
+              Terapkan filter untuk melihat analisis berbasis lokasi
             </p>
           </div>
         </div>

@@ -33,7 +33,7 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
             </div>
             <div>
               <h1 className="font-bold text-lg text-white">SPIDERMAN</h1>
-              <p className="text-xs text-gray-400">Intelligence Dashboard</p>
+              <p className="text-xs text-gray-400">Dashboard Intelijen</p>
             </div>
           </div>
 
@@ -52,7 +52,7 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
                 className="flex items-center gap-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
               >
                 <Network className="h-4 w-4" />
-                Network Graph
+                Graf Jaringan
               </TabsTrigger>
               {/* <TabsTrigger
                 value="geospatial"
@@ -70,7 +70,7 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
           {/* System Status */}
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-sm text-gray-300">System Active</span>
+            <span className="text-sm text-gray-300">Sistem Aktif</span>
           </div>
 
           {/* Active Tasks Badge */}
@@ -78,7 +78,7 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
             variant="secondary"
             className="gap-1 bg-gray-800 text-gray-300 border-gray-700"
           >
-            <span className="w-2 h-2 bg-red-500 rounded-full" />3 Active Tasks
+            <span className="w-2 h-2 bg-red-500 rounded-full" />3 Tugas Aktif
           </Badge>
 
           <div className="h-6 w-px bg-gray-700" />
@@ -91,7 +91,7 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
               className="text-gray-400 hover:text-white hover:bg-gray-800"
             >
               <Bell className="h-4 w-4" />
-              <span className="sr-only">Notifications</span>
+              <span className="sr-only">Notifikasi</span>
             </Button>
 
             <Button
@@ -102,7 +102,7 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
             >
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span className="sr-only">Toggle theme</span>
+              <span className="sr-only">Ubah tema</span>
             </Button>
 
             <DropdownMenu>
@@ -113,7 +113,7 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
                   className="rounded-full text-gray-400 hover:text-white hover:bg-gray-800"
                 >
                   <User className="h-4 w-4" />
-                  <span className="sr-only">User menu</span>
+                  <span className="sr-only">Menu pengguna</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -121,14 +121,14 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
                 className="bg-gray-900 border-gray-700"
               >
                 <DropdownMenuLabel className="text-gray-300">
-                  Financial Analyst
+                  Analis Keuangan
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-700" />
                 <DropdownMenuItem className="text-gray-300 hover:bg-gray-800">
-                  Profile Settings
+                  Pengaturan Profil
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-gray-300 hover:bg-gray-800">
-                  System Preferences
+                  Preferensi Sistem
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-gray-700" />
                 <DropdownMenuItem className="text-gray-300 hover:bg-gray-800">

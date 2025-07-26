@@ -26,70 +26,70 @@ export function NetworkGraphPage() {
       {/* Controls */}
       <Card>
         <CardHeader>
-          <CardTitle>Network Analysis Controls</CardTitle>
+          <CardTitle>Kontrol Analisis Jaringan</CardTitle>
           <CardDescription>
-            Configure filters and visualization settings
+            Konfigurasi filter dan pengaturan visualisasi
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="priority-level">Priority Level</Label>
+              <Label htmlFor="priority-level">Tingkat Prioritas</Label>
               <Select>
                 <SelectTrigger>
-                  <SelectValue placeholder="All levels" />
+                  <SelectValue placeholder="Semua tingkat" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High Priority</SelectItem>
-                  <SelectItem value="medium">Medium Priority</SelectItem>
-                  <SelectItem value="low">Low Priority</SelectItem>
+                  <SelectItem value="all">Semua Tingkat</SelectItem>
+                  <SelectItem value="critical">Kritis</SelectItem>
+                  <SelectItem value="high">Prioritas Tinggi</SelectItem>
+                  <SelectItem value="medium">Prioritas Menengah</SelectItem>
+                  <SelectItem value="low">Prioritas Rendah</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="entity-type">Entity Type</Label>
+              <Label htmlFor="entity-type">Jenis Entitas</Label>
               <Select>
                 <SelectTrigger>
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder="Semua jenis" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="bank">Bank Account</SelectItem>
-                  <SelectItem value="ewallet">E-Wallet</SelectItem>
-                  <SelectItem value="qris">QRIS Code</SelectItem>
-                  <SelectItem value="phone">Phone Number</SelectItem>
+                  <SelectItem value="all">Semua Jenis</SelectItem>
+                  <SelectItem value="bank">Rekening Bank</SelectItem>
+                  <SelectItem value="ewallet">Dompet Digital</SelectItem>
+                  <SelectItem value="qris">Kode QRIS</SelectItem>
+                  <SelectItem value="phone">Nomor Telepon</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="time-range">Time Range</Label>
+              <Label htmlFor="time-range">Rentang Waktu</Label>
               <Select>
                 <SelectTrigger>
-                  <SelectValue placeholder="Last 30 days" />
+                  <SelectValue placeholder="30 hari terakhir" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7d">Last 7 days</SelectItem>
-                  <SelectItem value="30d">Last 30 days</SelectItem>
-                  <SelectItem value="90d">Last 90 days</SelectItem>
-                  <SelectItem value="1y">Last year</SelectItem>
+                  <SelectItem value="7d">7 hari terakhir</SelectItem>
+                  <SelectItem value="30d">30 hari terakhir</SelectItem>
+                  <SelectItem value="90d">90 hari terakhir</SelectItem>
+                  <SelectItem value="1y">Tahun lalu</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="search">Search Entity</Label>
-              <Input placeholder="Enter entity ID..." />
+              <Label htmlFor="search">Cari Entitas</Label>
+              <Input placeholder="Masukkan ID entitas..." />
             </div>
           </div>
           <div className="flex gap-2 mt-4">
             <Button>
               <Filter className="mr-2 h-4 w-4" />
-              Apply Filters
+              Terapkan Filter
             </Button>
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
-              Export Graph
+              Ekspor Graf
             </Button>
           </div>
         </CardContent>
@@ -101,9 +101,9 @@ export function NetworkGraphPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Network Graph</CardTitle>
+                <CardTitle>Graf Jaringan</CardTitle>
                 <CardDescription>
-                  Interactive visualization of entity relationships
+                  Visualisasi interaktif hubungan antar entitas
                 </CardDescription>
               </div>
               <div className="flex gap-2">
@@ -121,10 +121,10 @@ export function NetworkGraphPage() {
               <div className="text-center">
                 <Network className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  Interactive network graph would be rendered here
+                  Graf jaringan interaktif akan ditampilkan di sini
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Using React Flow or D3.js for visualization
+                  Menggunakan React Flow atau D3.js untuk visualisasi
                 </p>
               </div>
             </div>
@@ -134,35 +134,35 @@ export function NetworkGraphPage() {
         {/* Node Details */}
         <Card>
           <CardHeader>
-            <CardTitle>Node Details</CardTitle>
-            <CardDescription>Information about selected entity</CardDescription>
+            <CardTitle>Detail Node</CardTitle>
+            <CardDescription>Informasi tentang entitas yang dipilih</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center text-muted-foreground">
               <Network className="h-8 w-8 mx-auto mb-2" />
-              <p className="text-sm">Click on a node to view details</p>
+              <p className="text-sm">Klik pada node untuk melihat detail</p>
             </div>
 
             {/* Example node details when selected */}
             <div className="space-y-3 pt-4 border-t">
               <div>
                 <h4 className="font-medium">BCA-7829****1234</h4>
-                <p className="text-sm text-muted-foreground">Bank Account</p>
+                <p className="text-sm text-muted-foreground">Rekening Bank</p>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Priority Score</span>
+                <span className="text-sm">Skor Prioritas</span>
                 <Badge variant="destructive">85</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Connections</span>
+                <span className="text-sm">Koneksi</span>
                 <span className="text-sm font-medium">12</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Last Activity</span>
-                <span className="text-sm font-medium">2h ago</span>
+                <span className="text-sm">Aktivitas Terakhir</span>
+                <span className="text-sm font-medium">2 jam lalu</span>
               </div>
               <Button className="w-full" size="sm">
-                View Full Profile
+                Lihat Profil Lengkap
               </Button>
             </div>
           </CardContent>
@@ -174,27 +174,27 @@ export function NetworkGraphPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">247</div>
-            <p className="text-sm text-muted-foreground">Total Nodes</p>
+            <p className="text-sm text-muted-foreground">Total Node</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">1,834</div>
-            <p className="text-sm text-muted-foreground">Total Connections</p>
+            <p className="text-sm text-muted-foreground">Total Koneksi</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">23</div>
             <p className="text-sm text-muted-foreground">
-              High-Priority Clusters
+              Kluster Prioritas Tinggi
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">7.4</div>
-            <p className="text-sm text-muted-foreground">Avg. Connections</p>
+            <p className="text-sm text-muted-foreground">Rata-rata Koneksi</p>
           </CardContent>
         </Card>
       </div>

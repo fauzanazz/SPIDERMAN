@@ -599,7 +599,7 @@ export function NetworkGraphView({
         <Alert className="max-w-md bg-red-900/50 border-red-700">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription className="text-red-300">
-            Failed to load graph data: {error?.message}
+            Gagal memuat data graf: {error?.message}
             <Button
               onClick={handleRefresh}
               variant="outline"
@@ -607,7 +607,7 @@ export function NetworkGraphView({
               className="mt-2 w-full border-red-600 text-red-400 hover:bg-red-800/20"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
-              Retry
+              Coba Lagi
             </Button>
           </AlertDescription>
         </Alert>
@@ -623,7 +623,7 @@ export function NetworkGraphView({
           <div className="flex items-center space-x-3">
             <div className="flex-1 flex space-x-2">
               <Input
-                placeholder="Search entities by account number, wallet address, phone..."
+                placeholder="Cari entitas berdasarkan nomor rekening, alamat dompet, telepon..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -650,7 +650,7 @@ export function NetworkGraphView({
             </div>
             {filters.search_query && (
               <div className="text-xs text-blue-400 whitespace-nowrap">
-                Searching: "{filters.search_query}"
+                Mencari: "{filters.search_query}"
               </div>
             )}
           </div>
@@ -662,10 +662,10 @@ export function NetworkGraphView({
         <div className="absolute top-4 right-4 z-20">
           <Card className="p-3 bg-green-900/90 border-green-700 backdrop-blur">
             <div className="text-sm text-green-300 font-medium">
-              Selection Mode Active
+              Mode Pilihan Aktif
             </div>
             <div className="text-xs text-green-400">
-              Click nodes to select for batch reporting
+              Klik node untuk memilih laporan batch
             </div>
           </Card>
         </div>
@@ -677,26 +677,26 @@ export function NetworkGraphView({
           <div className="text-sm space-y-1 text-center">
             <div className="flex justify-center gap-6">
               <div>
-                <span className="text-gray-400">Nodes:</span>
+                <span className="text-gray-400">Node:</span>
                 <span className="font-medium text-white ml-2">
                   {isLoading ? "..." : networkStats.nodes}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400">Edges:</span>
+                <span className="text-gray-400">Koneksi:</span>
                 <span className="font-medium text-white ml-2">
                   {isLoading ? "..." : networkStats.edges}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400">Clusters:</span>
+                <span className="text-gray-400">Kluster:</span>
                 <span className="font-medium text-white ml-2">
                   {isLoading ? "..." : networkStats.clusters}
                 </span>
               </div>
               {currentMode === "selection" && (
                 <div>
-                  <span className="text-gray-400">Selected:</span>
+                  <span className="text-gray-400">Dipilih:</span>
                   <span className="font-medium text-green-400 ml-2">
                     {selectedEntities.length}
                   </span>
@@ -705,7 +705,7 @@ export function NetworkGraphView({
             </div>
             {graphData && (
               <div className="text-xs text-gray-500">
-                Total Transactions:{" "}
+                Total Transaksi:{" "}
                 {graphData.total_transactions?.toLocaleString() || 0}
               </div>
             )}
@@ -717,7 +717,7 @@ export function NetworkGraphView({
           <Card className="p-6 bg-black/90 border-gray-700 backdrop-blur">
             <div className="flex items-center space-x-3">
               <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
-              <div className="text-white">Loading graph data...</div>
+              <div className="text-white">Memuat data graf...</div>
             </div>
           </Card>
         </div>
@@ -751,27 +751,27 @@ export function NetworkGraphView({
                 {hoveredNode.entity.identifier}
               </div>
               <div className="text-gray-400 space-y-1">
-                <div>Type: {hoveredNode.entity.type.replace("_", " ")}</div>
-                <div>Holder: {hoveredNode.entity.accountHolder}</div>
-                <div>Priority: {hoveredNode.entity.priorityScore}</div>
-                <div>Connections: {hoveredNode.entity.connections}</div>
+                <div>Tipe: {hoveredNode.entity.type.replace("_", " ")}</div>
+                <div>Pemegang: {hoveredNode.entity.accountHolder}</div>
+                <div>Prioritas: {hoveredNode.entity.priorityScore}</div>
+                <div>Koneksi: {hoveredNode.entity.connections}</div>
                 <div>
-                  Transactions:{" "}
+                  Transaksi:{" "}
                   {hoveredNode.entity.transactions.toLocaleString()}
                 </div>
                 <div>
-                  Total Amount: Rp{" "}
+                  Total Jumlah: Rp{" "}
                   {hoveredNode.entity.totalAmount.toLocaleString()}
                 </div>
                 {hoveredNode.cluster &&
                   hoveredNode.cluster !== "standalone" && (
-                    <div>Cluster: {hoveredNode.cluster}</div>
+                    <div>Kluster: {hoveredNode.cluster}</div>
                   )}
                 {currentMode === "selection" && (
                   <div className="text-green-400 text-xs mt-2">
                     {isNodeSelected(hoveredNode)
-                      ? "✓ Selected"
-                      : "Click to select"}
+                      ? "✓ Dipilih"
+                      : "Klik untuk memilih"}
                   </div>
                 )}
               </div>
@@ -783,11 +783,11 @@ export function NetworkGraphView({
       <div className="absolute bottom-4 right-4 z-10">
         <Card className="p-3 bg-black/90 border-gray-700 backdrop-blur">
           <div className="text-sm space-y-3">
-            <div className="font-medium mb-2 text-gray-400">Entity Types</div>
+            <div className="font-medium mb-2 text-gray-400">Tipe Entitas</div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-blue-800"></div>
-                <span className="text-xs text-white">Bank Account</span>
+                <span className="text-xs text-white">Rekening Bank</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-violet-600"></div>
@@ -795,35 +795,35 @@ export function NetworkGraphView({
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                <span className="text-xs text-white">Crypto/QRIS</span>
+                <span className="text-xs text-white">Kripto/QRIS</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-violet-500"></div>
-                <span className="text-xs text-white">Phone Number</span>
+                <span className="text-xs text-white">Nomor Telepon</span>
               </div>
             </div>
 
             <div className="border-t border-gray-600 pt-2 mt-3">
               <div className="font-medium mb-2 text-gray-400">
-                Priority Levels
+                Tingkat Prioritas
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-600"></div>
                   <span className="text-xs text-white">
-                    High Priority (80+)
+                    Prioritas Tinggi (80+)
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-orange-600"></div>
                   <span className="text-xs text-white">
-                    Medium Priority (60-79)
+                    Prioritas Sedang (60-79)
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-600"></div>
                   <span className="text-xs text-white">
-                    Low Priority (&lt;60)
+                    Prioritas Rendah (&lt;60)
                   </span>
                 </div>
               </div>
@@ -832,7 +832,7 @@ export function NetworkGraphView({
             {currentMode === "selection" && (
               <div className="border-t border-gray-600 pt-2 mt-3">
                 <div className="font-medium mb-2 text-gray-400">
-                  Selection Mode
+                  Mode Pilihan
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -840,7 +840,7 @@ export function NetworkGraphView({
                       className="w-4 h-4 rounded-full border-2 border-green-600"
                       style={{ borderStyle: "dashed" }}
                     ></div>
-                    <span className="text-xs text-white">Selected Node</span>
+                    <span className="text-xs text-white">Node Dipilih</span>
                   </div>
                 </div>
               </div>
@@ -848,7 +848,7 @@ export function NetworkGraphView({
 
             <div className="border-t border-gray-600 pt-2 mt-3">
               <div className="font-medium mb-2 text-gray-400">
-                Connection Types
+                Tipe Koneksi
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -856,15 +856,15 @@ export function NetworkGraphView({
                     className="w-4 h-0.5 bg-gray-600"
                     style={{ borderTop: "1px dashed" }}
                   ></div>
-                  <span className="text-xs text-white">Same Site</span>
+                  <span className="text-xs text-white">Situs Sama</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-0.5 bg-amber-500"></div>
-                  <span className="text-xs text-white">Transaction</span>
+                  <span className="text-xs text-white">Transaksi</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-0.5 bg-blue-500"></div>
-                  <span className="text-xs text-white">Connected</span>
+                  <span className="text-xs text-white">Terhubung</span>
                 </div>
               </div>
             </div>
@@ -880,9 +880,9 @@ export function NetworkGraphView({
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <Network className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-300 mb-2">No entities found</p>
+              <p className="text-gray-300 mb-2">Tidak ada entitas ditemukan</p>
               <p className="text-sm text-gray-500 mb-4">
-                Try adjusting your filters or search criteria
+                Coba sesuaikan filter atau kriteria pencarian Anda
               </p>
               <Button
                 onClick={handleRefresh}

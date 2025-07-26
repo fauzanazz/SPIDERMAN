@@ -232,14 +232,14 @@ export function MultiSelectFilter({
       {/* Quick stats */}
       {hasActiveFilters() && (
         <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-          <div className="text-sm text-gray-300 mb-2">Active Filters:</div>
+          <div className="text-sm text-gray-300 mb-2">Filter Aktif:</div>
           <div className="space-y-1">
             {filterGroups.map((group) => {
               const count = getSelectedCount(group);
               if (count === 0) return null;
               return (
                 <div key={group.id} className="text-xs text-gray-400">
-                  {group.label}: {count} selected
+                  {group.label}: {count} terpilih
                 </div>
               );
             })}
@@ -346,9 +346,9 @@ export function MultiSelectFilter({
           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
         >
           <Search className="mr-2 h-4 w-4" />
-          Search
+          Cari
           {hasUnappliedChanges() && (
-            <span className="ml-1 text-xs">(Changes)</span>
+            <span className="ml-1 text-xs">(Perubahan)</span>
           )}
         </Button>
         <Button
@@ -357,7 +357,7 @@ export function MultiSelectFilter({
           disabled={!hasActiveFilters()}
           className="border-gray-600 text-gray-400 hover:bg-gray-800 bg-transparent disabled:opacity-50"
         >
-          Clear All
+          Hapus Semua
         </Button>
       </div>
     </div>
