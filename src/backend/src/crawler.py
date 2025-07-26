@@ -8,7 +8,8 @@ import traceback
 import base64
 from . import storage
 from typing import Optional, List
-from browser_use import Agent, Controller, ActionResult, BrowserContext 
+from browser_use import Agent, Controller, ActionResult, BrowserContext ,  BrowserSession
+
 import datetime
 
 from .config import get_llm_config, get_extraction_instruction, generate_random_identity, pre_registration_payment_discovery_prompt
@@ -67,6 +68,11 @@ class IndonesianAccountExtractor:
         
         try:
             # Create agent for payment discovery
+            browser_session = BrowserSession(
+                use_adblock=False,  # Allow all content including ads
+                viewport={"width": 1280, "height": 1100},
+                viewport_expansion=-1
+            )
             controller = Controller(output_model=PaymentDiscoveryResult)
             agent = Agent(
                 task=f"Navigate to {url} and {pre_registration_payment_discovery_prompt}",
@@ -74,6 +80,7 @@ class IndonesianAccountExtractor:
                 headless=True,
                 controller=controller,
                 capture_screenshots=False, 
+                browser_session = browser_session
             )
 
            
@@ -147,14 +154,23 @@ class IndonesianAccountExtractor:
             task_context += "Use multiple registration attempts with different identities to discover all available payment methods and account details. "
             
             task = f"Navigate to {url} and {task_context}{extraction_instruction}"
+        
+            # Disable ad blocking to capture all content
+            browser_session = BrowserSession(
+                use_adblock=False,  # Allow all content including ads
+                viewport={"width": 1280, "height": 1100},
+                viewport_expansion=-1
+            )
             controller = Controller(output_model=GamblingSiteData)
             agent = Agent(
                 task=task,
                 llm=get_llm_config(),
                 headless=True,
                 controller=controller,
-                capture_screenshots=False
+                capture_screenshots=False,
+                browser_session=browser_session
             )
+            
 
             @controller.action('Save a screenshot of the current page with the name of the account holder exist in this page')
             async def save_screenshot(browser: BrowserContext):
