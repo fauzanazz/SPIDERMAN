@@ -45,11 +45,11 @@ import {
   useStartSiteAnalysis,
   useTaskStatus,
   useRetryTask,
+  useAllTasks,
   getTaskStatusBadgeColor,
   isTaskRunning,
   type TaskStatus,
 } from "@/lib/api/task-api";
-import { useTaskContext } from "@/hooks/useTaskContext";
 import { toast } from "sonner";
 
 interface RightSidebarProps {
@@ -90,7 +90,13 @@ export function RightSidebar({
 
   // Task management state
   const [newSiteUrl, setNewSiteUrl] = useState("");
-  const { activeTasks, addTask } = useTaskContext();
+
+  // Fetch all tasks from backend
+  const {
+    data: allTasks = [],
+    isLoading: isLoadingTasks,
+    refetch: refetchTasks,
+  } = useAllTasks();
 
   // Task API hooks
   const startSiteAnalysisMutation = useStartSiteAnalysis();
@@ -101,18 +107,10 @@ export function RightSidebar({
     if (!newSiteUrl.trim()) return;
 
     try {
-      const result = await startSiteAnalysisMutation.mutateAsync(
-        newSiteUrl.trim()
-      );
-
-      // Add task to context
-      addTask({
-        task_id: result.task_id,
-        status: "PENDING",
-        result: { message: "Task started", url: newSiteUrl.trim() },
-      });
-
+      await startSiteAnalysisMutation.mutateAsync(newSiteUrl.trim());
       setNewSiteUrl(""); // Clear input
+      // Refetch tasks to get the updated list
+      refetchTasks();
     } catch (error) {
       console.error("Failed to start site analysis:", error);
     }
@@ -121,13 +119,9 @@ export function RightSidebar({
   // Handle retrying a task
   const handleRetryTask = async (url: string) => {
     try {
-      const result = await retryTaskMutation.mutateAsync(url);
-
-      addTask({
-        task_id: result.task_id,
-        status: "PENDING",
-        result: { message: "Task retried", url },
-      });
+      await retryTaskMutation.mutateAsync(url);
+      // Refetch tasks to get the updated list
+      refetchTasks();
     } catch (error) {
       console.error("Failed to retry task:", error);
     }
@@ -845,7 +839,7 @@ export function RightSidebar({
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400 flex items-center justify-between">
-                              Tugas Aktif ({activeTasks.length})
+                              Tugas Aktif ({allTasks.length})
                               <Button
                                 onClick={onRefreshData}
                                 variant="ghost"
@@ -860,7 +854,11 @@ export function RightSidebar({
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="space-y-3">
-                            {activeTasks.length === 0 ? (
+                            {isLoadingTasks ? (
+                              <div className="text-xs text-gray-500 text-center py-4">
+                                Memuat tugas...
+                              </div>
+                            ) : allTasks.length === 0 ? (
                               <div className="text-xs text-gray-500 text-center py-4">
                                 Tidak ada tugas aktif. Mulai analisis situs baru
                                 di atas.
@@ -868,7 +866,7 @@ export function RightSidebar({
                             ) : (
                               <ScrollArea className="max-h-64">
                                 <div className="space-y-2">
-                                  {activeTasks.map((task: TaskStatus) => (
+                                  {allTasks.map((task: TaskStatus) => (
                                     <TaskStatusCard
                                       key={task.task_id}
                                       task={task}

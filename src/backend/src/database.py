@@ -440,7 +440,7 @@ class Neo4jHandler:
             logger.warning("Cannot seed demo data - database not connected")
             return {"success": False, "error": "Database not connected"}
             
-        logger.info("🎬 Starting simplified hierarchy seeding with 24 nodes...")
+        logger.info("🎬 Starting simplified hierarchy seeding with 33 nodes...")
         
         # Specific OSS keys as requested
         demo_oss_keys = [
@@ -451,7 +451,7 @@ class Neo4jHandler:
             "EMI_SARPONIKA"
         ]
         
-        # 3 different gambling websites (one pooling account per website)
+        # 3 different gambling websites (each will have 3 pooling accounts)
         gambling_websites = [
             {"url": "https://judolbola88.com", "name": "JudolBola88"},
             {"url": "https://slotgacor99.net", "name": "SlotGacor99"},
@@ -487,9 +487,9 @@ class Neo4jHandler:
                         "waktu": datetime.now().isoformat()
                     })
                 
-                # New simplified structure:
+                # New structure:
                 # 20 Player Accounts (not featured on any website, transfer to pooling accounts)
-                # 3 Pooling Accounts (each associated with one website, grouped by website)
+                # 9 Pooling Accounts (3 per website, each website guaranteed to have 1 BCA)
                 # 1 Layer-2 Account (receives from all pooling accounts, top-level aggregator)
                 
                 created_entities = []
@@ -576,49 +576,79 @@ class Neo4jHandler:
                             "cluster": "players"
                         })
                 
-                # 2. Create 3 Pooling Accounts (one per website, each associated with distinct website)
-                logger.info("🏦 Creating 3 pooling accounts (one per website)...")
+                # 2. Create 9 Pooling Accounts (3 per website, each website guaranteed to have 1 BCA)
+                logger.info("🏦 Creating 9 pooling accounts (3 per website, each with at least 1 BCA)...")
                 
-                for i, site in enumerate(gambling_websites):
-                    oss_key = demo_oss_keys[entity_counter % len(demo_oss_keys)]
-                    entity_counter += 1
+                # Bank options for pooling accounts (excluding BCA for now, we'll handle it separately)
+                other_banks = ["BRI", "BNI", "Mandiri", "CIMB Niaga", "Danamon", "Permata", "BTN"]
+                
+                for site_idx, site in enumerate(gambling_websites):
+                    logger.info(f"Creating pooling accounts for {site['name']}...")
                     
-                    # Create bank account for pooling
-                    bank_name = ["BCA", "BRI", "BNI"][i]  # Different bank for each pooling account
-                    account_number = f"{random.randint(1000000000, 9999999999)}"
-                    
-                    account_query = """
-                    MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
-                    SET a.jenis_akun = 'CHECKING',
-                        a.nama_bank = $nama_bank,
-                        a.pemilik_rekening = $pemilik_rekening,
-                        a.terakhir_update = $waktu,
-                        a.priority_score = $priority_score,
-                        a.oss_key = $oss_key,
-                        a.cluster_id = $cluster_id,
-                        a.associated_sites = [$site_url],
-                        a.connections = 5,
-                        a.is_test_data = true
-                    """
-                    
-                    session.run(account_query, {
-                        "nomor_rekening": account_number,
-                        "nama_bank": bank_name,
-                        "pemilik_rekening": f"Pooling {site['name']}",
-                        "waktu": datetime.now().isoformat(),
-                        "priority_score": random.randint(70, 90),
-                        "oss_key": oss_key,
-                        "cluster_id": f"website_{i}",
-                        "site_url": site["url"]
-                    })
-                    
-                    pooling_account_ids.append(account_number)
-                    created_entities.append({
-                        "type": "AkunMencurigakan",
-                        "identifier": account_number,
-                        "cluster": f"website_{i}",
-                        "associated_website": site["url"]
-                    })
+                    # Create 3 pooling accounts for each website
+                    for pool_idx in range(3):
+                        oss_key = demo_oss_keys[entity_counter % len(demo_oss_keys)]
+                        entity_counter += 1
+                        
+                        # First pooling account for each website is always BCA
+                        if pool_idx == 0:
+                            bank_name = "BCA"
+                            logger.info(f"  Creating BCA pooling account for {site['name']}")
+                        else:
+                            # Other pooling accounts use different banks
+                            bank_name = random.choice(other_banks)
+                            logger.info(f"  Creating {bank_name} pooling account for {site['name']}")
+                        
+                        account_number = f"{random.randint(1000000000, 9999999999)}"
+                        
+                        account_query = """
+                        MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
+                        SET a.jenis_akun = 'CHECKING',
+                            a.nama_bank = $nama_bank,
+                            a.pemilik_rekening = $pemilik_rekening,
+                            a.terakhir_update = $waktu,
+                            a.priority_score = $priority_score,
+                            a.oss_key = $oss_key,
+                            a.cluster_id = $cluster_id,
+                            a.associated_sites = [$site_url],
+                            a.connections = 5,
+                            a.pooling_rank = $pooling_rank,
+                            a.is_test_data = true
+                        """
+                        
+                        session.run(account_query, {
+                            "nomor_rekening": account_number,
+                            "nama_bank": bank_name,
+                            "pemilik_rekening": f"Pooling {site['name']} #{pool_idx + 1}",
+                            "waktu": datetime.now().isoformat(),
+                            "priority_score": random.randint(70, 90),
+                            "oss_key": oss_key,
+                            "cluster_id": f"website_{site_idx}",
+                            "site_url": site["url"],
+                            "pooling_rank": pool_idx + 1
+                        })
+                        
+                        # Also create relationship with gambling site
+                        site_relationship_query = """
+                        MATCH (g:SitusJudi {url: $site_url})
+                        MATCH (a:AkunMencurigakan {nomor_rekening: $account_number})
+                        MERGE (g)-[:MENGGUNAKAN_REKENING]->(a)
+                        """
+                        
+                        session.run(site_relationship_query, {
+                            "site_url": site["url"],
+                            "account_number": account_number
+                        })
+                        
+                        pooling_account_ids.append(account_number)
+                        created_entities.append({
+                            "type": "AkunMencurigakan",
+                            "identifier": account_number,
+                            "cluster": f"website_{site_idx}",
+                            "associated_website": site["url"],
+                            "bank": bank_name,
+                            "pooling_rank": pool_idx + 1
+                        })
                 
                 # 3. Create 1 Layer-2 Account (top-level aggregator)
                 logger.info("🔝 Creating 1 layer-2 aggregator account...")
@@ -638,7 +668,7 @@ class Neo4jHandler:
                     a.priority_score = $priority_score,
                     a.oss_key = $oss_key,
                     a.cluster_id = 'layer2',
-                    a.connections = 8,
+                    a.connections = 12,
                     a.is_test_data = true
                 """
                 
@@ -667,9 +697,9 @@ class Neo4jHandler:
                 MATCH (from_entity {is_test_data: true})
                 MATCH (to_entity {is_test_data: true}) 
                 WHERE ((from_entity:AkunMencurigakan AND from_entity.nomor_rekening = $from_identifier) OR
-                       (from_entity:EWallet AND from_entity.wallet_id = $from_identifier)) AND
-                      ((to_entity:AkunMencurigakan AND to_entity.nomor_rekening = $to_identifier) OR
-                       (to_entity:EWallet AND to_entity.wallet_id = $to_identifier))
+                    (from_entity:EWallet AND from_entity.wallet_id = $from_identifier)) AND
+                    ((to_entity:AkunMencurigakan AND to_entity.nomor_rekening = $to_identifier) OR
+                    (to_entity:EWallet AND to_entity.wallet_id = $to_identifier))
                 CREATE (from_entity)-[t:TRANSFERS_TO {
                     amount: $amount,
                     timestamp: $timestamp,
@@ -678,10 +708,10 @@ class Neo4jHandler:
                 }]->(to_entity)
                 """
                 
-                # 1. Player Accounts → Pooling Accounts (each player transfers to one pooling account)
-                logger.info("🎮 Creating Player → Pooling transfers...")
+                # 1. Player Accounts → Pooling Accounts (each player transfers to EXACTLY 1 pooling account)
+                logger.info("🎮 Creating Player → Pooling transfers (1 transfer per player)...")
                 for player_id in player_account_ids:
-                    # Each player transfers to one random pooling account
+                    # Each player transfers to exactly ONE pooling account
                     pooling_target = random.choice(pooling_account_ids)
                     
                     try:
@@ -693,11 +723,12 @@ class Neo4jHandler:
                             "reference": f"PLY{random.randint(100000, 999999)}"
                         })
                         transaction_count += 1
+                        logger.debug(f"Player {player_id} → Pooling {pooling_target}")
                     except Exception as e:
                         logger.debug(f"Player→Pooling transaction failed: {e}")
                 
-                # 2. Pooling Accounts → Layer-2 Account (all pooling accounts transfer to the top-level aggregator)
-                logger.info("🏦 Creating Pooling → Layer-2 transfers...")
+                # 2. Pooling Accounts → Layer-2 Account (all pooling accounts transfer ONLY to the layer-2 account)
+                logger.info("🏦 Creating Pooling → Layer-2 transfers (each pooling account transfers only to layer-2)...")
                 for pooling_id in pooling_account_ids:
                     try:
                         session.run(transaction_query, {
@@ -708,6 +739,7 @@ class Neo4jHandler:
                             "reference": f"AGG{random.randint(100000, 999999)}"
                         })
                         transaction_count += 1
+                        logger.debug(f"Pooling {pooling_id} → Layer-2 {layer2_account_id}")
                     except Exception as e:
                         logger.debug(f"Pooling→Layer2 transaction failed: {e}")
                 
@@ -733,13 +765,25 @@ class Neo4jHandler:
                 rel_result = session.run(rel_count_query)
                 rel_counts = {record["rel_type"]: record["count"] for record in rel_result}
                 
-                logger.info("🎬 Simplified hierarchy seeding completed successfully!")
+                # Get BCA account distribution per website
+                bca_distribution_query = """
+                MATCH (a:AkunMencurigakan {is_test_data: true, nama_bank: 'BCA'})
+                WHERE a.cluster_id STARTS WITH 'website_'
+                RETURN a.cluster_id as cluster, a.associated_sites[0] as website, count(a) as bca_count
+                ORDER BY cluster
+                """
+                
+                bca_result = session.run(bca_distribution_query)
+                bca_distribution = [dict(record) for record in bca_result]
+                
+                logger.info("🎬 Enhanced hierarchy seeding completed successfully!")
                 logger.info(f"📊 Created nodes: {counts}")
                 logger.info(f"🔗 Created relationships: {rel_counts}")
                 logger.info(f"💸 Total transactions created: {transaction_count}")
                 logger.info(f"🎮 Player accounts: {len(player_account_ids)}")
-                logger.info(f"🏦 Pooling accounts: {len(pooling_account_ids)}")
+                logger.info(f"🏦 Pooling accounts: {len(pooling_account_ids)} (3 per website)")
                 logger.info(f"🔝 Layer-2 account: {layer2_account_id}")
+                logger.info(f"🏛️ BCA distribution: {bca_distribution}")
                 
                 return {
                     "success": True,
@@ -751,15 +795,26 @@ class Neo4jHandler:
                     "network_structure": {
                         "player_accounts": len(player_account_ids),
                         "pooling_accounts": len(pooling_account_ids),
+                        "pooling_accounts_per_website": 3,
                         "layer2_account": 1,
-                        "hierarchy": "Players → Pooling Accounts (by website) → Layer-2 Account"
+                        "hierarchy": "Players → Pooling Accounts (3 per website) → Layer-2 Account"
+                    },
+                    "bca_guarantee": {
+                        "requirement": "Each website must have at least 1 BCA account",
+                        "distribution": bca_distribution,
+                        "total_bca_pooling_accounts": len(bca_distribution)
                     },
                     "demo_features": {
                         "player_accounts": player_account_ids,
                         "pooling_accounts": pooling_account_ids,
                         "layer2_account": layer2_account_id,
                         "oss_keys_used": demo_oss_keys,
-                        "money_flow": "Players deposit to pooling accounts grouped by website, then aggregated to layer-2"
+                        "transaction_rules": {
+                            "player_to_pooling": "Each player transfers to exactly 1 pooling account",
+                            "pooling_to_layer2": "Each pooling account transfers only to the single layer-2 account",
+                            "no_cross_transfers": "Pooling accounts do not transfer to each other"
+                        },
+                        "money_flow": "Players (1:1) → Pooling Accounts (N:1) → Layer-2 Account"
                     }
                 }
                 
@@ -768,7 +823,6 @@ class Neo4jHandler:
             import traceback
             logger.error(f"📍 Traceback: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
-
     def clear_test_data(self):
         """
         Clear all test data from the database (keeps schema samples)

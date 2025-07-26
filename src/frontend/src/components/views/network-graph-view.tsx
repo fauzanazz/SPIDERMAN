@@ -113,6 +113,7 @@ export function NetworkGraphView({
   const previousDataRef = useRef<string>("");
   const previousModeRef = useRef<string>(currentMode);
   const [hoveredNode, setHoveredNode] = useState<NetworkNode | null>(null);
+  const [svgTransform, setSvgTransform] = useState({ k: 1, x: 0, y: 0 });
   const [networkStats, setNetworkStats] = useState({
     nodes: 0,
     edges: 0,
@@ -424,6 +425,12 @@ export function NetworkGraphView({
       .scaleExtent([0.1, 4])
       .on("zoom", (event) => {
         g.attr("transform", event.transform);
+        // Track the transform for tooltip positioning
+        setSvgTransform({
+          k: event.transform.k,
+          x: event.transform.x,
+          y: event.transform.y,
+        });
       });
 
     svg.call(zoom);
@@ -704,12 +711,12 @@ export function NetworkGraphView({
           const targetId =
             typeof d.target === "string" ? d.target : d.target.id;
 
-          // Red for both incoming and outgoing edges from/to the selected entity
-          if (
-            sourceId === selectedEntity.id ||
-            targetId === selectedEntity.id
-          ) {
-            return "#dc2626"; // Red for edges connected to selected entity
+          // Directional coloring based on transaction flow
+          if (sourceId === selectedEntity.id) {
+            return "#dc2626"; // Red for outbound edges (FROM selected entity)
+          }
+          if (targetId === selectedEntity.id) {
+            return "#10b981"; // Green for inbound edges (TO selected entity)
           }
         }
 
@@ -1161,8 +1168,21 @@ export function NetworkGraphView({
             <div
               className="absolute pointer-events-none z-20 bg-black/95 border border-gray-600 text-white p-3 rounded text-sm backdrop-blur max-w-xs"
               style={{
-                left: hoveredNode.x,
-                top: hoveredNode.y,
+                left: Math.max(
+                  10,
+                  Math.min(
+                    window.innerWidth - 300, // Prevent tooltip from going off right edge
+                    hoveredNode.x * svgTransform.k + svgTransform.x + 20 // Add offset from node
+                  )
+                ),
+                top: Math.max(
+                  10,
+                  Math.min(
+                    window.innerHeight - 200, // Prevent tooltip from going off bottom edge
+                    hoveredNode.y * svgTransform.k + svgTransform.y - 10 // Add offset from node
+                  )
+                ),
+                transform: "translateZ(0)", // Force hardware acceleration for smoother positioning
               }}
             >
               <div className="font-bold text-gray-300 mb-1">
@@ -1286,9 +1306,15 @@ export function NetworkGraphView({
                   <span className="text-xs text-white">Terhubung</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <div className="w-4 h-0.5 bg-green-600"></div>
+                  <span className="text-xs text-white">
+                    Masuk ke Entitas Terpilih
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
                   <div className="w-4 h-0.5 bg-red-600"></div>
                   <span className="text-xs text-white">
-                    Terpilih (Masuk/Keluar)
+                    Keluar dari Entitas Terpilih
                   </span>
                 </div>
               </div>

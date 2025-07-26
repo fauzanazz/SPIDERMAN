@@ -16,6 +16,22 @@ export interface TaskStatus {
   result: Record<string, unknown> | null;
 }
 
+export interface TaskInfo {
+  task_id: string;
+  status: string;
+  worker: string;
+  args?: unknown[];
+  kwargs?: Record<string, unknown>;
+  eta?: string | null;
+  expires?: string | null;
+}
+
+export interface TaskListResponse {
+  status: string;
+  tasks: TaskInfo[];
+  total: number;
+}
+
 export interface SitusJudiRequest {
   url: string;
 }
@@ -105,6 +121,17 @@ const taskApi = {
 
     if (!response.ok) {
       throw new Error(`Failed to get task status: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  // Get all tasks
+  async getAllTasks(): Promise<TaskListResponse> {
+    const response = await fetch(`${API_BASE_URL}/tasks`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get tasks: ${response.statusText}`);
     }
 
     return response.json();
@@ -284,6 +311,33 @@ export const useRetryTask = () => {
         duration: 6000,
       });
       console.error("Failed to retry task:", error);
+    },
+  });
+};
+
+// Hook to get all tasks
+export const useAllTasks = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["tasks"],
+    queryFn: () => taskApi.getAllTasks(),
+    enabled,
+    refetchInterval: 5000, // Poll every 5 seconds for task updates
+    staleTime: 2000, // Consider data stale after 2 seconds
+    refetchOnWindowFocus: true,
+    select: (data) => {
+      // Transform TaskInfo[] to TaskStatus[] for compatibility
+      return data.tasks.map(
+        (task): TaskStatus => ({
+          task_id: task.task_id,
+          status: task.status,
+          result: {
+            message: `Task ${task.status.toLowerCase()}`,
+            worker: task.worker,
+            args: task.args,
+            kwargs: task.kwargs,
+          },
+        })
+      );
     },
   });
 };

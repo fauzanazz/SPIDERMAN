@@ -430,7 +430,8 @@ export function LeftSidebar({
                                   nodeDetail?.gambling_sites ||
                                   [];
 
-                                return websites.length > 0 ? (
+                                return Array.isArray(websites) &&
+                                  websites.length > 0 ? (
                                   <div className="space-y-2">
                                     {websites.map((site, index) => (
                                       <div
@@ -524,15 +525,22 @@ export function LeftSidebar({
                                 nodeDetail.connected_entities.length > 0 ? (
                                 <div className="space-y-3">
                                   {nodeDetail.connected_entities.map(
-                                    (connectedEntityNode: EntityNode, index) => {
+                                    (
+                                      connectedEntityNode: EntityNode,
+                                      index
+                                    ) => {
                                       // Convert EntityNode directly to Entity
                                       const connectedEntity =
                                         convertBackendEntityToFrontend({
                                           ...connectedEntityNode,
-                                          entity_type: connectedEntityNode.entity_type,
-                                          account_holder: connectedEntityNode.account_holder,
-                                          priority_score: connectedEntityNode.priority_score,
-                                          total_amount: connectedEntityNode.total_amount,
+                                          entity_type:
+                                            connectedEntityNode.entity_type,
+                                          account_holder:
+                                            connectedEntityNode.account_holder,
+                                          priority_score:
+                                            connectedEntityNode.priority_score,
+                                          total_amount:
+                                            connectedEntityNode.total_amount,
                                           connected_entities: [], // EntityNode doesn't have this field
                                         } as BackendEntity);
 

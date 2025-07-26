@@ -3,7 +3,6 @@
 import { Bell, Moon, Sun, User, Network, Shield } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,14 +71,6 @@ export function TopBar({ currentView, onViewChange }: TopBarProps) {
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             <span className="text-sm text-gray-300">Sistem Aktif</span>
           </div>
-
-          {/* Active Tasks Badge */}
-          <Badge
-            variant="secondary"
-            className="gap-1 bg-gray-800 text-gray-300 border-gray-700"
-          >
-            <span className="w-2 h-2 bg-red-500 rounded-full" />3 Tugas Aktif
-          </Badge>
 
           <div className="h-6 w-px bg-gray-700" />
 
