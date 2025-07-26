@@ -39,10 +39,6 @@ import {
   type Entity,
   convertBackendEntityToFrontend,
   type BackendEntity,
-  type BankAccountProvider,
-  type CryptoProvider,
-  type EWalletProvider,
-  type PhoneProvider,
 } from "@/lib/types/entity";
 import { graphApi, type EntityNode } from "@/lib/api/graph-api";
 
@@ -60,10 +56,13 @@ const entityNodeToBackendEntity = (entityNode: EntityNode): BackendEntity => ({
   entity_type: entityNode.entity_type,
   account_holder: entityNode.account_holder,
   connected_entities: [], // EntityNode doesn't have this, so we provide empty array
-  bank_name: entityNode.bank_name as BankAccountProvider,
-  cryptocurrency: entityNode.cryptocurrency as CryptoProvider,
-  wallet_type: entityNode.wallet_type as EWalletProvider,
-  phone_provider: entityNode.phone_provider as PhoneProvider,
+  connections: entityNode.connections || 0,
+  specific_information: entityNode.specific_information || "Unknown",
+  id: entityNode.id,
+  identifier: entityNode.identifier,
+  priority_score: entityNode.priority_score,
+  total_amount: entityNode.total_amount || 0,
+  transactions: entityNode.transactions || 0,
 });
 
 export function LeftSidebar({

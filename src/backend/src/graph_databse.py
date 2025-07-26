@@ -164,6 +164,19 @@ class GraphDatabaseHandler:
         if calculate_aggregates:
             aggregated = self._calculate_aggregated_fields(node_id)
         
+        # Determine specific information based on entity type
+        specific_information = None
+        if entity_type == "bank_account":
+            specific_information = node_props.get("nama_bank") or node_props.get("bank_name")
+        elif entity_type == "e_wallet":
+            specific_information = node_props.get("wallet_type")
+        elif entity_type == "crypto_wallet":
+            specific_information = node_props.get("cryptocurrency")
+        elif entity_type == "phone_number":
+            specific_information = node_props.get("phone_provider") or node_props.get("provider")
+        elif entity_type == "qris":
+            specific_information = "QRIS"
+        
         return EntityNode(
             id=node_id,
             identifier=identifier,
@@ -175,25 +188,23 @@ class GraphDatabaseHandler:
             total_amount=aggregated["total_amount"],
             last_activity=node_props.get("terakhir_update"),
             created_at=node_props.get("created_at"),
-            bank_name=node_props.get("nama_bank") or node_props.get("bank_name"),
-            cryptocurrency=node_props.get("cryptocurrency"),
-            wallet_type=node_props.get("wallet_type"),
-            phone_provider=node_props.get("phone_provider"),
-            additional_info=node_props.get("additional_info")
+            specific_information=specific_information
         )
     
     def get_whole_graph(self, filters: GraphFilters) -> GraphResponse:
         """Get all entities in the graph with optional filtering and clustering by websites"""
         if not self.db._check_connection():
             logger.error("Cannot query - database not connected")
-            return GraphResponse(clusters=[], standalone_entities=[], total_entities=0, total_transactions=0)
+            return GraphResponse(clusters=[], standalone_entities=[], transactions=[], total_entities=0, total_transactions=0)
         
         where_clause, params = self._build_filter_conditions(filters)
         
-        # Query for entities linked to gambling sites
+        # Query for entities grouped by their associated sites (using associated_sites property)
         clustered_query = f"""
-        MATCH (site:SitusJudi)-[rel]->(entity)
+        MATCH (site:SitusJudi)
+        MATCH (entity)
         WHERE {where_clause}
+        AND site.url IN entity.associated_sites
         WITH site, collect(DISTINCT entity) as entities
         WHERE size(entities) > 0
         RETURN site.url as website_url, 
@@ -202,17 +213,18 @@ class GraphDatabaseHandler:
         ORDER BY site.nama
         """
         
-        # Query for standalone entities (not linked to any site)
+        # Query for standalone entities (not associated with any site)
         standalone_query = f"""
         MATCH (entity)
         WHERE {where_clause}
-        AND NOT exists((entity)<-[:MENGGUNAKAN_REKENING|MENGGUNAKAN_CRYPTO|MENERIMA_PEMBAYARAN]-(:SitusJudi))
+        AND (entity.associated_sites IS NULL OR size(entity.associated_sites) = 0)
         RETURN entity
         ORDER BY coalesce(entity.priority_score, 0) DESC
         """
         
         clusters = []
         standalone_entities = []
+        transactions = []
         
         try:
             with self.db.driver.session() as session:
@@ -236,6 +248,39 @@ class GraphDatabaseHandler:
                 for record in result:
                     standalone_entities.append(self._node_to_entity(record))
                 
+                # Get all TRANSFERS_TO relationships between entities in our filtered dataset
+                all_entity_ids = []
+                for cluster in clusters:
+                    all_entity_ids.extend([entity.id for entity in cluster.entities])
+                all_entity_ids.extend([entity.id for entity in standalone_entities])
+                
+                if all_entity_ids:
+                    # Query for all TRANSFERS_TO relationships between our entities
+                    transaction_query = """
+                    MATCH (from_entity)-[t:TRANSFERS_TO]->(to_entity)
+                    WHERE elementId(from_entity) IN $entity_ids 
+                    AND elementId(to_entity) IN $entity_ids
+                    RETURN elementId(from_entity) as from_id,
+                           elementId(to_entity) as to_id,
+                           t.amount as amount,
+                           t.timestamp as timestamp,
+                           t.transaction_type as transaction_type,
+                           t.reference as reference
+                    ORDER BY t.timestamp DESC
+                    """
+                    
+                    tx_result = session.run(transaction_query, {"entity_ids": all_entity_ids})
+                    for tx_record in tx_result:
+                        transactions.append(Transaction(
+                            from_node=tx_record["from_id"],
+                            to_node=tx_record["to_id"],
+                            amount=tx_record["amount"] or 0.0,
+                            timestamp=tx_record["timestamp"] or datetime.now().isoformat(),
+                            transaction_type=tx_record["transaction_type"] or "transfer",
+                            reference=tx_record["reference"],
+                            direction=TransactionDirection.OUTGOING  # Default, will be corrected in frontend
+                        ))
+                
                 # Calculate totals
                 total_entities = sum(len(cluster.entities) for cluster in clusters) + len(standalone_entities)
                 
@@ -247,13 +292,14 @@ class GraphDatabaseHandler:
                 return GraphResponse(
                     clusters=clusters,
                     standalone_entities=standalone_entities,
+                    transactions=transactions,
                     total_entities=total_entities,
                     total_transactions=total_transactions
                 )
                 
         except Exception as e:
             logger.error(f"Error getting whole graph: {e}")
-            return GraphResponse(clusters=[], standalone_entities=[], total_entities=0, total_transactions=0)
+            return GraphResponse(clusters=[], standalone_entities=[], transactions=[], total_entities=0, total_transactions=0)
     
     def get_node_detail(self, node_id: str) -> Optional[NodeDetailResponse]:
         """Get detailed information about a specific node"""
@@ -361,18 +407,19 @@ class GraphDatabaseHandler:
             "terakhir_update": datetime.now().isoformat()
         }
         
-        # Add type-specific properties
-        if node_data.bank_name:
-            properties["nama_bank"] = node_data.bank_name
-            properties["bank_name"] = node_data.bank_name
-        if node_data.cryptocurrency:
-            properties["cryptocurrency"] = node_data.cryptocurrency
-        if node_data.wallet_type:
-            properties["wallet_type"] = node_data.wallet_type
-        if node_data.phone_provider:
-            properties["phone_provider"] = node_data.phone_provider
-        if node_data.additional_info:
-            properties["additional_info"] = node_data.additional_info
+        # Add specific information based on entity type
+        if node_data.specific_information:
+            # Store in the appropriate field based on entity type for backward compatibility
+            if node_data.entity_type == "bank_account":
+                properties["nama_bank"] = node_data.specific_information
+                properties["bank_name"] = node_data.specific_information
+            elif node_data.entity_type == "crypto_wallet":
+                properties["cryptocurrency"] = node_data.specific_information
+            elif node_data.entity_type == "e_wallet":
+                properties["wallet_type"] = node_data.specific_information
+            elif node_data.entity_type == "phone_number":
+                properties["phone_provider"] = node_data.specific_information
+                properties["provider"] = node_data.specific_information  # Alternative field name
         
         # Build property string for query
         prop_assignments = []

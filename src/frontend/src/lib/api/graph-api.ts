@@ -29,11 +29,7 @@ export interface EntityNode {
   total_amount: number;
   last_activity?: string;
   created_at?: string;
-  bank_name?: string;
-  cryptocurrency?: string;
-  wallet_type?: string;
-  phone_provider?: string;
-  additional_info?: Record<string, string | string[]>;
+  specific_information?: string; // Consolidated field for bank_name, wallet_type, etc.
 }
 
 export interface Transaction {
@@ -55,6 +51,7 @@ export interface WebsiteCluster {
 export interface GraphResponse {
   clusters: WebsiteCluster[];
   standalone_entities: EntityNode[];
+  transactions: Transaction[]; // All TRANSFERS_TO relationships in the graph
   total_entities: number;
   total_transactions: number;
 }
@@ -77,11 +74,7 @@ export interface NodeCreate {
     | "qris";
   account_holder: string;
   custom_id?: string;
-  bank_name?: string;
-  cryptocurrency?: string;
-  wallet_type?: string;
-  phone_provider?: string;
-  additional_info?: Record<string, string | number | boolean | string[]>;
+  specific_information?: string; // Consolidated field for bank_name, wallet_type, etc.
 }
 
 export interface TransactionCreate {
