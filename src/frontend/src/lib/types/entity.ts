@@ -85,10 +85,7 @@ export type BackendEntity = {
   identifier: string;
   entity_type: EntityType;
   account_holder: string;
-  bank_name?: BankAccountProvider;
-  cryptocurrency?: CryptoProvider;
-  wallet_type?: EWalletProvider;
-  phone_provider?: PhoneProvider;
+  specific_information?: string; // Consolidated field for bank_name, wallet_type, crypto type, etc.
   priority_score: number;
   connections: number;
   last_activity?: string;
@@ -96,12 +93,11 @@ export type BackendEntity = {
   transactions: number;
   total_amount: number;
   connected_entities: Entity[]; // Will be populated separately
-  additional_info?: Record<string, string | string[]>; // Any other backend-specific fields
 };
 export function convertBackendEntityToFrontend(
   backendEntity: BackendEntity
 ): Entity {
-  // Determine specificInformation based on entity type
+  // Determine specificInformation from the consolidated field or fallback to "Unknown"
   let specificInformation:
     | BankAccountProvider
     | EWalletProvider
@@ -110,25 +106,23 @@ export function convertBackendEntityToFrontend(
     | CryptoProvider
     | Others;
 
+  const specificInfo = backendEntity.specific_information || "Unknown";
+
   switch (backendEntity.entity_type) {
     case "bank_account":
-      specificInformation = (backendEntity.bank_name ||
-        "Unknown") as BankAccountProvider;
+      specificInformation = specificInfo as BankAccountProvider;
       break;
     case "e_wallet":
-      specificInformation = (backendEntity.wallet_type ||
-        "Unknown") as EWalletProvider;
+      specificInformation = specificInfo as EWalletProvider;
       break;
     case "phone_number":
-      specificInformation = (backendEntity.phone_provider ||
-        "Unknown") as PhoneProvider;
+      specificInformation = specificInfo as PhoneProvider;
       break;
     case "qris":
       specificInformation = "QRIS" as QRISProvider;
       break;
     case "crypto_wallet":
-      specificInformation = (backendEntity.cryptocurrency ||
-        "Unknown") as CryptoProvider;
+      specificInformation = specificInfo as CryptoProvider;
       break;
     default:
       specificInformation = "Others" as Others; // Default case for any other types

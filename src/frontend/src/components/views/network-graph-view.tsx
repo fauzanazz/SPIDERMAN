@@ -48,7 +48,10 @@ interface NetworkEdge {
   source: string | NetworkNode;
   target: string | NetworkNode;
   strength: number;
-  type: "transaction" | "same_site" | "connected";
+  type: "transaction" | "same_site" | "connected" | "transfer";
+  amount?: number; // For transfer edges
+  timestamp?: string; // For transfer edges
+  reference?: string; // For transfer edges
 }
 
 interface GraphCluster {
@@ -59,6 +62,15 @@ interface GraphCluster {
 interface GraphData {
   clusters?: GraphCluster[];
   standalone_entities?: EntityNode[];
+  transactions?: {
+    from_node: string;
+    to_node: string;
+    amount: number;
+    timestamp: string;
+    transaction_type: string;
+    reference?: string;
+    direction: "incoming" | "outgoing";
+  }[];
   total_transactions?: number;
 }
 
@@ -193,19 +205,7 @@ export function NetworkGraphView({
           nodeMap.set(backendEntity.id, node);
         });
 
-        // Create edges between entities in the same cluster
-        if (cluster.entities.length > 1) {
-          for (let i = 0; i < cluster.entities.length; i++) {
-            for (let j = i + 1; j < cluster.entities.length; j++) {
-              edges.push({
-                source: cluster.entities[i].id,
-                target: cluster.entities[j].id,
-                strength: 0.3,
-                type: "same_site",
-              });
-            }
-          }
-        }
+        // No artificial same_site edges - only show TRANSFERS_TO relationships
       });
 
       // Process standalone entities
@@ -233,44 +233,21 @@ export function NetworkGraphView({
         nodeMap.set(backendEntity.id, node);
       });
 
-      // Create additional edges based on connections
-      nodes.forEach((node) => {
-        if (node.entity.connections > 0) {
-          const potentialConnections = nodes.filter(
-            (otherNode) =>
-              otherNode.id !== node.id &&
-              otherNode.entity.type === node.entity.type &&
-              Math.abs(
-                otherNode.entity.priorityScore - node.entity.priorityScore
-              ) < 20
-          );
+      // Add actual TRANSFERS_TO relationships as edges
+      graphData.transactions?.forEach((transaction) => {
+        const sourceNode = nodeMap.get(transaction.from_node);
+        const targetNode = nodeMap.get(transaction.to_node);
 
-          const numConnections = Math.min(
-            Math.floor(Math.random() * 3) + 1,
-            potentialConnections.length
-          );
-
-          for (let i = 0; i < numConnections; i++) {
-            const target =
-              potentialConnections[
-                Math.floor(Math.random() * potentialConnections.length)
-              ];
-            if (
-              target &&
-              !edges.some(
-                (e) =>
-                  (e.source === node.id && e.target === target.id) ||
-                  (e.source === target.id && e.target === node.id)
-              )
-            ) {
-              edges.push({
-                source: node.id,
-                target: target.id,
-                strength: 0.6,
-                type: "connected",
-              });
-            }
-          }
+        if (sourceNode && targetNode) {
+          edges.push({
+            source: transaction.from_node,
+            target: transaction.to_node,
+            strength: 0.8, // Strong connection for actual transactions
+            type: "transfer",
+            amount: transaction.amount,
+            timestamp: transaction.timestamp,
+            reference: transaction.reference,
+          });
         }
       });
 
@@ -327,11 +304,7 @@ export function NetworkGraphView({
     const logoPatterns = new Set();
     nodes.forEach((node) => {
       const logoUrl = getLogoUrl(node.entity);
-      const specificInfo =
-        node.entity.specificInformation ||
-        node.entity.bank_name ||
-        node.entity.wallet_type ||
-        node.entity.cryptocurrency;
+      const specificInfo = node.entity.specificInformation;
 
       if (logoUrl && specificInfo && !logoPatterns.has(specificInfo)) {
         logoPatterns.add(specificInfo);
@@ -371,7 +344,86 @@ export function NetworkGraphView({
       }
     });
 
-    // Create force simulation
+    // Group nodes by cluster for better positioning
+    const clusterGroups = new Map<string, NetworkNode[]>();
+    const clusterCenters = new Map<string, { x: number; y: number }>();
+
+    nodes.forEach((node) => {
+      const cluster = node.cluster || "standalone";
+      if (!clusterGroups.has(cluster)) {
+        clusterGroups.set(cluster, []);
+      }
+      clusterGroups.get(cluster)!.push(node);
+    });
+
+    // Pre-calculate cluster centers in a circle layout for better separation
+    const clusterNames = Array.from(clusterGroups.keys()).filter(
+      (name) => name !== "standalone"
+    );
+    const radius = Math.min(width, height) * 0.3; // Clusters distributed in a circle
+    clusterNames.forEach((clusterName, i) => {
+      const angle = (i * 2 * Math.PI) / clusterNames.length;
+      clusterCenters.set(clusterName, {
+        x: width / 2 + radius * Math.cos(angle),
+        y: height / 2 + radius * Math.sin(angle),
+      });
+    });
+
+    // Standalone entities in the center
+    clusterCenters.set("standalone", { x: width / 2, y: height / 2 });
+
+    // Set initial positions for nodes based on their cluster centers
+    nodes.forEach((node) => {
+      const clusterName = node.cluster || "standalone";
+      const center = clusterCenters.get(clusterName);
+      if (center) {
+        // Add some random offset from cluster center
+        const offset = 50;
+        node.x = center.x + (Math.random() - 0.5) * offset;
+        node.y = center.y + (Math.random() - 0.5) * offset;
+      }
+    });
+
+    // Create cluster backgrounds
+    const clusterLayer = g.append("g").attr("class", "clusters");
+
+    // Add cluster background circles (will be positioned during simulation)
+    const clusterBackgrounds = clusterLayer
+      .selectAll("circle")
+      .data(
+        Array.from(clusterGroups.keys()).filter((key) => key !== "standalone")
+      )
+      .enter()
+      .append("circle")
+      .attr("class", "cluster-background")
+      .attr("r", 0) // Will be updated during simulation
+      .attr("fill", (_, i) => {
+        const colors = [
+          "rgba(59, 130, 246, 0.1)",
+          "rgba(16, 185, 129, 0.1)",
+          "rgba(245, 158, 11, 0.1)",
+          "rgba(168, 85, 247, 0.1)",
+          "rgba(239, 68, 68, 0.1)",
+          "rgba(236, 72, 153, 0.1)",
+        ];
+        return colors[i % colors.length];
+      })
+      .attr("stroke", (_, i) => {
+        const colors = [
+          "#3b82f6",
+          "#10b981",
+          "#f59e0b",
+          "#a855f7",
+          "#ef4444",
+          "#ec4899",
+        ];
+        return colors[i % colors.length];
+      })
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "5,5")
+      .attr("stroke-opacity", 0.5);
+
+    // Create force simulation with improved cluster separation
     const simulation = d3
       .forceSimulation(nodes)
       .force(
@@ -381,21 +433,79 @@ export function NetworkGraphView({
           .id((d) => (d as NetworkNode).id)
           .distance((d) => {
             switch (d.type) {
+              case "transfer":
+                return 80; // Moderate distance for transfer edges
               case "same_site":
-                return 80;
+                return 30; // Keep same-site nodes close
               case "transaction":
-                return 120;
+                return 100;
               case "connected":
-                return 100;
+                return 60;
               default:
-                return 100;
+                return 50;
             }
           })
-          .strength((d: NetworkEdge) => d.strength)
+          .strength((d: NetworkEdge) => d.strength * 0.3) // Much reduced link strength to allow cluster forces to dominate
       )
-      .force("charge", d3.forceManyBody().strength(-300))
+      .force("charge", d3.forceManyBody().strength(-150)) // Reduced repulsion for tighter clusters
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(30));
+      .force("collision", d3.forceCollide().radius(35)) // Slightly smaller collision radius
+      .force("cluster", function () {
+        // Strong cluster force to group nodes by their gambling site
+        const strength = 0.8; // Much stronger clustering force
+        return function (alpha: number) {
+          nodes.forEach((node) => {
+            const clusterName = node.cluster || "standalone";
+            const center = clusterCenters.get(clusterName);
+
+            if (center) {
+              const dx = center.x - (node.x || 0);
+              const dy = center.y - (node.y || 0);
+
+              // Apply stronger force for cluster cohesion
+              const force = strength * alpha * 0.1;
+              node.vx = (node.vx || 0) + dx * force;
+              node.vy = (node.vy || 0) + dy * force;
+            }
+          });
+        };
+      })
+      .force("separate-clusters", function () {
+        // Additional force to keep clusters separated
+        const strength = 2.0;
+        return function (alpha: number) {
+          clusterNames.forEach((cluster1, i) => {
+            clusterNames.forEach((cluster2, j) => {
+              if (i >= j) return;
+
+              const center1 = clusterCenters.get(cluster1);
+              const center2 = clusterCenters.get(cluster2);
+              if (!center1 || !center2) return;
+
+              const dx = center2.x - center1.x;
+              const dy = center2.y - center1.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              const minDistance = 150; // Minimum distance between cluster centers
+
+              if (distance < minDistance) {
+                const force = (minDistance - distance) * strength * alpha;
+                const fx = (dx / distance) * force;
+                const fy = (dy / distance) * force;
+
+                // Push clusters apart
+                clusterGroups.get(cluster1)?.forEach((node) => {
+                  node.vx = (node.vx || 0) - fx * 0.1;
+                  node.vy = (node.vy || 0) - fy * 0.1;
+                });
+                clusterGroups.get(cluster2)?.forEach((node) => {
+                  node.vx = (node.vx || 0) + fx * 0.1;
+                  node.vy = (node.vy || 0) + fy * 0.1;
+                });
+              }
+            });
+          });
+        };
+      });
 
     // Create links
     const link = g
@@ -456,11 +566,7 @@ export function NetworkGraphView({
       .attr("r", (d: NetworkNode) => getNodeSize(d.entity.connections) - 4) // Slightly smaller for border effect
       .attr("fill", (d: NetworkNode) => {
         const logoUrl = getLogoUrl(d.entity);
-        const specificInfo =
-          d.entity.specificInformation ||
-          d.entity.bank_name ||
-          d.entity.wallet_type ||
-          d.entity.cryptocurrency;
+        const specificInfo = d.entity.specificInformation;
 
         if (logoUrl && specificInfo) {
           const patternId = `logo-${specificInfo
@@ -519,30 +625,76 @@ export function NetworkGraphView({
         .attr("y2", (d: NetworkEdge) => (d.target as NetworkNode).y!);
 
       node.attr("transform", (d: NetworkNode) => `translate(${d.x},${d.y})`);
+
+      // Update cluster background positions and sizes
+      clusterBackgrounds.each(function (clusterName) {
+        const nodesInCluster = clusterGroups.get(clusterName) || [];
+        if (nodesInCluster.length === 0) return;
+
+        // Calculate cluster bounds
+        let minX = Infinity,
+          maxX = -Infinity,
+          minY = Infinity,
+          maxY = -Infinity;
+        nodesInCluster.forEach((n) => {
+          const x = n.x || 0;
+          const y = n.y || 0;
+          const nodeSize = getNodeSize(n.entity.connections) + 20; // Add padding
+          minX = Math.min(minX, x - nodeSize);
+          maxX = Math.max(maxX, x + nodeSize);
+          minY = Math.min(minY, y - nodeSize);
+          maxY = Math.max(maxY, y + nodeSize);
+        });
+
+        // Calculate center and radius
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const radius = Math.max(
+          Math.sqrt(Math.pow(maxX - minX, 2) + Math.pow(maxY - minY, 2)) / 2 +
+            30,
+          80 // Minimum radius
+        );
+
+        // Update cluster background
+        d3.select(this)
+          .attr("cx", centerX)
+          .attr("cy", centerY)
+          .attr("r", radius);
+      });
     });
+
+    console.log("Graph re-rendering due to data change");
 
     return () => {
       simulation.stop();
     };
   }, [
     graphData,
-    onEntitySelect,
+    isLoading,
     currentMode,
-    selectedEntities,
-    selectedEntity,
     convertToNetworkData,
     handleNodeClick,
-    isLoading,
     isNodeSelected,
   ]);
 
+  // Separate effect to update selection visuals without recreating the graph
+  useEffect(() => {
+    if (!nodesRef.current) return;
+
+    // Update selection highlights
+    nodesRef.current
+      .select(".selection-border")
+      .attr("stroke", (d: NetworkNode) =>
+        isNodeSelected(d) ? "#10b981" : "transparent"
+      )
+      .style("opacity", (d: NetworkNode) => (isNodeSelected(d) ? 0.8 : 0));
+
+    console.log("Selection visual update");
+  }, [selectedEntities, selectedEntity, currentMode, isNodeSelected]);
+
   // Helper function to get logo URL based on specific information
   const getLogoUrl = (entity: Entity) => {
-    const specificInfo =
-      entity.specificInformation ||
-      entity.bank_name ||
-      entity.wallet_type ||
-      entity.cryptocurrency;
+    const specificInfo = entity.specificInformation;
     if (!specificInfo) return null;
 
     // Normalize the name to match SVG file naming convention
@@ -739,8 +891,8 @@ export function NetworkGraphView({
             <div
               className="absolute pointer-events-none z-20 bg-black/95 border border-gray-600 text-white p-3 rounded text-sm backdrop-blur max-w-xs"
               style={{
-                left: Math.min(hoveredNode.x + 20, window.innerWidth - 300),
-                top: Math.max(hoveredNode.y - 10, 10),
+                left: hoveredNode.x,
+                top: hoveredNode.y,
               }}
             >
               <div className="font-bold text-gray-300 mb-1">

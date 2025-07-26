@@ -31,12 +31,8 @@ class NodeCreate(BaseModel):
     entity_type: EntityType = Field(..., description="Type of entity")
     account_holder: str = Field(..., description="Name of account holder")
     custom_id: Optional[str] = None  # For upsert functionality
-    # Optional fields based on entity type
-    bank_name: Optional[str] = None  # For bank accounts
-    cryptocurrency: Optional[str] = None  # For crypto wallets
-    wallet_type: Optional[str] = None  # For e-wallets (OVO, DANA, etc)
-    phone_provider: Optional[str] = None  # For phone numbers
-    additional_info: Optional[Dict[str, Any]] = None
+    # Consolidated specific information field
+    specific_information: Optional[str] = None  # Bank name, crypto type, wallet type, phone provider, etc.
 
 class TransactionCreate(BaseModel):
     from_identifier: str = Field(..., description="Source account identifier")
@@ -58,12 +54,8 @@ class EntityNode(BaseModel):
     total_amount: float = 0.0
     last_activity: Optional[str] = None
     created_at: Optional[str] = None
-    # Type-specific fields
-    bank_name: Optional[str] = None
-    cryptocurrency: Optional[str] = None
-    wallet_type: Optional[str] = None
-    phone_provider: Optional[str] = None
-    additional_info: Optional[Dict[str, Any]] = None
+    # Consolidated specific information
+    specific_information: Optional[str] = None  # Bank name, crypto type, wallet type, phone provider, etc.
 
 class Transaction(BaseModel):
     from_node: str
@@ -82,6 +74,7 @@ class WebsiteCluster(BaseModel):
 class GraphResponse(BaseModel):
     clusters: List[WebsiteCluster]
     standalone_entities: List[EntityNode]  # Entities not linked to any website
+    transactions: List[Transaction]  # All TRANSFERS_TO relationships in the graph
     total_entities: int
     total_transactions: int
 

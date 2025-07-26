@@ -9,7 +9,7 @@ Used Library
 Poetry Command
 - poetry add [library_name]
 - poetry install
-- poetry run fastapi dev ./src/main.py
+- poetry run uvicorn src.main:app --reload 
 
 OpenAPI
 - localhost:8000/docs ( Default )
