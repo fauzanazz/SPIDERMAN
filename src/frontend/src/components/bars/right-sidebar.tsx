@@ -46,6 +46,8 @@ import {
   useTaskStatus,
   useRetryTask,
   useAllTasks,
+  // useActiveTasks,    // Available for polling only active tasks more frequently
+  // useTaskPolling,    // Available for custom polling intervals
   getTaskStatusBadgeColor,
   isTaskRunning,
   type TaskStatus,
@@ -91,12 +93,29 @@ export function RightSidebar({
   // Task management state
   const [newSiteUrl, setNewSiteUrl] = useState("");
 
-  // Fetch all tasks from backend
+  // Fetch all tasks from backend with 1-minute polling
   const {
     data: allTasks = [],
     isLoading: isLoadingTasks,
     refetch: refetchTasks,
   } = useAllTasks();
+
+  /*
+   * Alternative polling strategies you can use:
+   *
+   * 1. For faster polling of active tasks only:
+   * const { data: activeTasks = [] } = useActiveTasks();
+   *
+   * 2. For custom polling interval (e.g., every 30 seconds):
+   * const { data: customTasks = [] } = useTaskPolling({
+   *   pollingInterval: 30000,  // 30 seconds
+   *   enableBackground: true,   // Keep polling when window not focused
+   *   enableNotifications: true // Show toast notifications
+   * });
+   *
+   * 3. For task results with notifications:
+   * const { data: taskResults } = useTaskResults();
+   */
 
   // Task API hooks
   const startSiteAnalysisMutation = useStartSiteAnalysis();

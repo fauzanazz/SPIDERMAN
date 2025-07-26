@@ -228,16 +228,19 @@ export const useTaskStatus = (taskId: string, enabled: boolean = true) => {
     queryFn: () => taskApi.getTaskStatus(taskId),
     enabled: enabled && !!taskId,
     refetchInterval: (query) => {
-      // Poll every 2 seconds while task is running
+      // Poll every 10 seconds while task is running for faster updates
       const data = query.state.data;
       if (data && isTaskRunning(data.status)) {
-        return 2000;
+        return 10000; // 10 seconds for active tasks
       }
-      // Poll every 30 seconds if completed (to check for updates)
-      return 30000;
+      // Poll every minute if completed (to check for result updates)
+      return 60000; // 1 minute for completed tasks
     },
-    staleTime: 1000, // Consider data stale after 1 second
+    staleTime: 5000, // Consider data stale after 5 seconds
     refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3, // Retry failed requests 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 
   // Show toast notifications when task status changes
@@ -315,15 +318,18 @@ export const useRetryTask = () => {
   });
 };
 
-// Hook to get all tasks
+// Hook to get all tasks with polling every minute
 export const useAllTasks = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["tasks"],
     queryFn: () => taskApi.getAllTasks(),
     enabled,
-    refetchInterval: 5000, // Poll every 5 seconds for task updates
-    staleTime: 2000, // Consider data stale after 2 seconds
+    refetchInterval: 60000, // Poll every minute (60 seconds) for task updates
+    staleTime: 30000, // Consider data stale after 30 seconds
     refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3, // Retry failed requests 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     select: (data) => {
       // Transform TaskInfo[] to TaskStatus[] for compatibility
       return data.tasks.map(
@@ -335,11 +341,173 @@ export const useAllTasks = (enabled: boolean = true) => {
             worker: task.worker,
             args: task.args,
             kwargs: task.kwargs,
+            eta: task.eta,
+            expires: task.expires,
           },
         })
       );
     },
   });
+};
+
+// Hook to get active (running) tasks with more frequent polling
+export const useActiveTasks = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["tasks", "active"],
+    queryFn: () => taskApi.getAllTasks(),
+    enabled,
+    refetchInterval: (query) => {
+      // Check if there are any running tasks
+      const data = query.state.data;
+      if (data && data.tasks.some((task) => isTaskRunning(task.status))) {
+        return 15000; // Poll every 15 seconds when there are active tasks
+      }
+      return 60000; // Poll every minute when no active tasks
+    },
+    staleTime: 10000, // Consider data stale after 10 seconds
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    select: (data) => {
+      // Filter and transform only active tasks
+      const activeTasks = data.tasks.filter((task) =>
+        isTaskRunning(task.status)
+      );
+      return activeTasks.map(
+        (task): TaskStatus => ({
+          task_id: task.task_id,
+          status: task.status,
+          result: {
+            message: `Task ${task.status.toLowerCase()}`,
+            worker: task.worker,
+            args: task.args,
+            kwargs: task.kwargs,
+            eta: task.eta,
+            expires: task.expires,
+          },
+        })
+      );
+    },
+  });
+};
+
+// Hook to get task results with detailed polling
+export const useTaskResults = (enabled: boolean = true) => {
+  const previousTaskCountRef = useRef<number>(0);
+
+  const query = useQuery({
+    queryKey: ["tasks", "results"],
+    queryFn: () => taskApi.getAllTasks(),
+    enabled,
+    refetchInterval: 60000, // Poll every minute for task results
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+
+  // Show notifications when new tasks are completed
+  useEffect(() => {
+    if (query.data) {
+      const completedTasks = query.data.tasks.filter((task) =>
+        isTaskCompleted(task.status)
+      );
+
+      if (completedTasks.length > previousTaskCountRef.current) {
+        const newCompletedTasks = completedTasks.slice(
+          previousTaskCountRef.current
+        );
+
+        newCompletedTasks.forEach((task) => {
+          if (task.status === "SUCCESS") {
+            toast.success("Task Results Updated", {
+              description: `Task ${task.task_id} completed successfully`,
+              duration: 5000,
+            });
+          } else if (task.status === "FAILURE") {
+            toast.error("Task Failed", {
+              description: `Task ${task.task_id} failed to complete`,
+              duration: 6000,
+            });
+          }
+        });
+      }
+
+      previousTaskCountRef.current = completedTasks.length;
+    }
+  }, [query.data]);
+
+  return query;
+};
+
+// Utility hook to control polling intervals based on user preference
+export const useTaskPolling = (options?: {
+  pollingInterval?: number; // Custom polling interval in milliseconds
+  enableBackground?: boolean; // Enable background polling when window is not focused
+  enableNotifications?: boolean; // Enable toast notifications for task updates
+}) => {
+  const {
+    pollingInterval = 60000, // Default 1 minute
+    enableBackground = true,
+    enableNotifications = true,
+  } = options || {};
+
+  const query = useQuery({
+    queryKey: ["tasks", "polling", pollingInterval],
+    queryFn: () => taskApi.getAllTasks(),
+    refetchInterval: pollingInterval,
+    staleTime: Math.min(pollingInterval / 2, 30000), // Half of polling interval or 30 seconds max
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchIntervalInBackground: enableBackground,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    select: (data) => {
+      return data.tasks.map(
+        (task): TaskStatus => ({
+          task_id: task.task_id,
+          status: task.status,
+          result: {
+            message: `Task ${task.status.toLowerCase()}`,
+            worker: task.worker,
+            args: task.args,
+            kwargs: task.kwargs,
+            eta: task.eta,
+            expires: task.expires,
+            updated_at: new Date().toISOString(), // Add timestamp for tracking updates
+          },
+        })
+      );
+    },
+  });
+
+  // Handle success and error using useEffect
+  useEffect(() => {
+    if (query.data && enableNotifications) {
+      const completedTasks = query.data.filter(
+        (task) => task.status === "SUCCESS" || task.status === "FAILURE"
+      );
+
+      // Log polling update
+      console.log(
+        `Polling update: ${query.data.length} total tasks, ${completedTasks.length} completed`
+      );
+    }
+  }, [query.data, enableNotifications]);
+
+  useEffect(() => {
+    if (query.error && enableNotifications) {
+      console.error("Task polling error:", query.error);
+      toast.error("Task Polling Error", {
+        description: "Failed to fetch task updates. Retrying...",
+        duration: 3000,
+      });
+    }
+  }, [query.error, enableNotifications]);
+
+  return query;
 };
 
 export default taskApi;
