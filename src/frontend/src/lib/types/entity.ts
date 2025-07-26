@@ -16,13 +16,6 @@ const PriorityLevel = {
 } as const;
 type PriorityLevel = (typeof PriorityLevel)[keyof typeof PriorityLevel];
 
-type Activity = {
-  id: string;
-  event: string;
-  time: string;
-  severity: PriorityLevel;
-};
-
 type Entity = {
   id: string;
   identifier: string; // This is the account number, wallet address, etc.
@@ -44,8 +37,6 @@ type Entity = {
   phoneNumber?: string; // Optional since not all entities have phone numbers
   transactions: number;
   totalAmount: number;
-  linkedEntities: Entity[]; // Will be populated from connected_entities
-  recentActivity: Activity[]; // Will need to be derived from transaction history
 
   // Additional backend fields
   bank_name?: string;
@@ -146,7 +137,7 @@ export function convertBackendEntityToFrontend(
   return {
     id: backendEntity.id,
     identifier: backendEntity.identifier,
-    location: "Unknown", 
+    location: "Unknown",
     name: backendEntity.account_holder,
     accountHolder: backendEntity.account_holder,
     type: backendEntity.entity_type,
@@ -161,14 +152,6 @@ export function convertBackendEntityToFrontend(
         : undefined,
     transactions: backendEntity.transactions,
     totalAmount: backendEntity.total_amount,
-    linkedEntities: [], // Will be populated separately
-    recentActivity: [], // Will be populated from transaction history
-
-    bank_name: backendEntity.bank_name,
-    cryptocurrency: backendEntity.cryptocurrency,
-    wallet_type: backendEntity.wallet_type,
-    phone_provider: backendEntity.phone_provider,
-    additional_info: backendEntity.additional_info,
   };
 }
 

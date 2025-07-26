@@ -320,6 +320,57 @@ export function NetworkGraphView({
     // Create main group
     const g = svg.append("g");
 
+    // Create defs for patterns (logos)
+    const defs = svg.append("defs");
+
+    // Create unique patterns for each entity's logo
+    const logoPatterns = new Set();
+    nodes.forEach((node) => {
+      const logoUrl = getLogoUrl(node.entity);
+      const specificInfo =
+        node.entity.specificInformation ||
+        node.entity.bank_name ||
+        node.entity.wallet_type ||
+        node.entity.cryptocurrency;
+
+      if (logoUrl && specificInfo && !logoPatterns.has(specificInfo)) {
+        logoPatterns.add(specificInfo);
+
+        const patternId = `logo-${specificInfo
+          .toLowerCase()
+          .replace(/\s+/g, "_")
+          .replace(/[^a-z0-9_]/g, "")}`;
+        const pattern = defs
+          .append("pattern")
+          .attr("id", patternId)
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", 1)
+          .attr("height", 1)
+          .attr("patternContentUnits", "objectBoundingBox");
+
+        // Add white background for better logo visibility
+        pattern
+          .append("rect")
+          .attr("width", 1)
+          .attr("height", 1)
+          .attr("fill", "#ffffff");
+
+        pattern
+          .append("image")
+          .attr("x", 0.1) // 10% padding
+          .attr("y", 0.1) // 10% padding
+          .attr("width", 0.8) // 80% of the circle
+          .attr("height", 0.8) // 80% of the circle
+          .attr("href", logoUrl)
+          .attr("preserveAspectRatio", "xMidYMid meet")
+          .on("error", function () {
+            // If logo fails to load, hide the image
+            d3.select(this).style("display", "none");
+          });
+      }
+    });
+
     // Create force simulation
     const simulation = d3
       .forceSimulation(nodes)
@@ -399,42 +450,33 @@ export function NetworkGraphView({
           })
       );
 
-    // Add circles to nodes
-    const nodeCircles = node
+    // Add logo circles on top of background
+    const logoCircles = node
       .append("circle")
-      .attr("r", (d: NetworkNode) => getNodeSize(d.entity.connections))
-      .attr("fill", (d: NetworkNode) => getEntityColor(d.entity))
-      .attr("stroke", (d: NetworkNode) => {
-        if (currentMode === "selection" && isNodeSelected(d)) {
-          return "#10b981"; // Green for selected in selection mode
-        } else if (
-          currentMode === "default" &&
-          selectedEntity?.id === d.entity.id
-        ) {
-          return "#dc2626"; // Red for selected in default mode
+      .attr("r", (d: NetworkNode) => getNodeSize(d.entity.connections) - 4) // Slightly smaller for border effect
+      .attr("fill", (d: NetworkNode) => {
+        const logoUrl = getLogoUrl(d.entity);
+        const specificInfo =
+          d.entity.specificInformation ||
+          d.entity.bank_name ||
+          d.entity.wallet_type ||
+          d.entity.cryptocurrency;
+
+        if (logoUrl && specificInfo) {
+          const patternId = `logo-${specificInfo
+            .toLowerCase()
+            .replace(/\s+/g, "_")
+            .replace(/[^a-z0-9_]/g, "")}`;
+          return `url(#${patternId})`;
         }
-        return "#ffffff";
+        // Fallback to entity color if no logo
+        return getEntityColor(d.entity);
       })
-      .attr("stroke-width", (d: NetworkNode) => {
-        if (isNodeSelected(d)) {
-          return 4;
-        }
-        return 2;
-      })
+      .attr("stroke", "none")
+      .style("cursor", "pointer")
       .on("mouseover", (_event, d: NetworkNode) => setHoveredNode(d))
       .on("mouseout", () => setHoveredNode(null))
       .on("click", handleNodeClick);
-
-    // Add text labels
-    node
-      .append("text")
-      .attr("text-anchor", "middle")
-      .attr("dominant-baseline", "middle")
-      .attr("font-size", "10")
-      .attr("font-weight", "bold")
-      .attr("fill", "white")
-      .attr("pointer-events", "none")
-      .text((d: NetworkNode) => getEntityLabel(d.entity));
 
     // Add priority indicator
     node
@@ -464,7 +506,7 @@ export function NetworkGraphView({
         .style("opacity", (d: NetworkNode) => (isNodeSelected(d) ? 0.8 : 0));
     }
 
-    nodesRef.current = nodeCircles;
+    nodesRef.current = logoCircles;
     linksRef.current = link;
     simulationRef.current = simulation;
 
@@ -494,9 +536,27 @@ export function NetworkGraphView({
     isNodeSelected,
   ]);
 
+  // Helper function to get logo URL based on specific information
+  const getLogoUrl = (entity: Entity) => {
+    const specificInfo =
+      entity.specificInformation ||
+      entity.bank_name ||
+      entity.wallet_type ||
+      entity.cryptocurrency;
+    if (!specificInfo) return null;
+
+    // Normalize the name to match SVG file naming convention
+    const logoName = specificInfo
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
+
+    return `/logos/${logoName}.svg`;
+  };
+
   // Helper functions
   const getNodeSize = (connections: number) => {
-    return Math.max(20, Math.min(40, connections * 3 + 20));
+    return Math.max(30, Math.min(50, connections * 3 + 30)); // Increased size for logo visibility
   };
 
   const getEntityColor = (entity: Entity) => {
@@ -652,8 +712,6 @@ export function NetworkGraphView({
           </div>
         </Card>
       </div>
-
-      {/* Loading Indicator */}
       {isLoading && (
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-30">
           <Card className="p-6 bg-black/90 border-gray-700 backdrop-blur">

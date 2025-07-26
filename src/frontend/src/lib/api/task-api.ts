@@ -1,5 +1,7 @@
 // src/frontend/src/lib/api/task-api.ts - Task management API
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useEffect, useRef } from "react";
 
 const API_BASE_URL = "http://localhost:8000";
 
@@ -134,7 +136,12 @@ export const useStartSiteAnalysis = () => {
 
   return useMutation({
     mutationFn: (url: string) => taskApi.startSiteAnalysis(url),
-    onSuccess: (data) => {
+    onSuccess: (data, url) => {
+      toast.success("Site Analysis Started", {
+        description: `Analysis for ${url} has been started with task ID: ${data.task_id}`,
+        duration: 4000,
+      });
+
       // Invalidate tasks queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
 
@@ -145,7 +152,11 @@ export const useStartSiteAnalysis = () => {
         result: { message: "Task started" },
       });
     },
-    onError: (error) => {
+    onError: (error: Error, url) => {
+      toast.error("Failed to Start Site Analysis", {
+        description: `Could not start analysis for ${url}: ${error.message}`,
+        duration: 6000,
+      });
       console.error("Failed to start site analysis:", error);
     },
   });
@@ -157,7 +168,12 @@ export const useStartBatchAnalysis = () => {
 
   return useMutation({
     mutationFn: (urls: string[]) => taskApi.startBatchAnalysis(urls),
-    onSuccess: (data) => {
+    onSuccess: (data, urls) => {
+      toast.success("Batch Analysis Started", {
+        description: `Batch analysis for ${urls.length} URLs has been started with task ID: ${data.task_id}`,
+        duration: 4000,
+      });
+
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
 
       queryClient.setQueryData(["task", data.task_id], {
@@ -166,7 +182,11 @@ export const useStartBatchAnalysis = () => {
         result: { message: "Batch task started" },
       });
     },
-    onError: (error) => {
+    onError: (error: Error, urls) => {
+      toast.error("Failed to Start Batch Analysis", {
+        description: `Could not start batch analysis for ${urls.length} URLs: ${error.message}`,
+        duration: 6000,
+      });
       console.error("Failed to start batch analysis:", error);
     },
   });
@@ -174,7 +194,9 @@ export const useStartBatchAnalysis = () => {
 
 // Hook to get task status with polling
 export const useTaskStatus = (taskId: string, enabled: boolean = true) => {
-  return useQuery({
+  const previousStatusRef = useRef<string | null>(null);
+
+  const query = useQuery({
     queryKey: ["task", taskId],
     queryFn: () => taskApi.getTaskStatus(taskId),
     enabled: enabled && !!taskId,
@@ -190,6 +212,50 @@ export const useTaskStatus = (taskId: string, enabled: boolean = true) => {
     staleTime: 1000, // Consider data stale after 1 second
     refetchOnWindowFocus: true,
   });
+
+  // Show toast notifications when task status changes
+  useEffect(() => {
+    if (query.data && previousStatusRef.current !== query.data.status) {
+      const { status, task_id } = query.data;
+
+      if (status === "SUCCESS" && previousStatusRef.current !== "SUCCESS") {
+        toast.success("Task Completed", {
+          description: `Task ${task_id} has completed successfully`,
+          duration: 5000,
+        });
+      } else if (
+        status === "FAILURE" &&
+        previousStatusRef.current !== "FAILURE"
+      ) {
+        toast.error("Task Failed", {
+          description: `Task ${task_id} has failed`,
+          duration: 6000,
+        });
+      } else if (
+        status === "PROCESSING" &&
+        previousStatusRef.current !== "PROCESSING"
+      ) {
+        toast.info("Task Processing", {
+          description: `Task ${task_id} is now processing`,
+          duration: 3000,
+        });
+      }
+
+      previousStatusRef.current = status;
+    }
+  }, [query.data]);
+
+  // Handle query errors
+  useEffect(() => {
+    if (query.error) {
+      toast.error("Task Status Error", {
+        description: `Failed to get status for task ${taskId}: ${query.error.message}`,
+        duration: 5000,
+      });
+    }
+  }, [query.error, taskId]);
+
+  return query;
 };
 
 // Hook to retry task
@@ -198,7 +264,12 @@ export const useRetryTask = () => {
 
   return useMutation({
     mutationFn: (url: string) => taskApi.retryTask(url),
-    onSuccess: (data) => {
+    onSuccess: (data, url) => {
+      toast.success("Task Retried", {
+        description: `Retry for ${url} has been started with task ID: ${data.task_id}`,
+        duration: 4000,
+      });
+
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
 
       queryClient.setQueryData(["task", data.task_id], {
@@ -207,7 +278,11 @@ export const useRetryTask = () => {
         result: { message: "Task retried" },
       });
     },
-    onError: (error) => {
+    onError: (error: Error, url) => {
+      toast.error("Failed to Retry Task", {
+        description: `Could not retry task for ${url}: ${error.message}`,
+        duration: 6000,
+      });
       console.error("Failed to retry task:", error);
     },
   });

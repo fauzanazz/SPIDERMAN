@@ -1,4 +1,6 @@
 import { config } from "@/lib/config";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export interface GraphFilters {
   entity_types?: string[];
@@ -247,4 +249,55 @@ export const useNodeCenteredGraph = (nodeId: string, filters: GraphFilters) => {
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: false,
   };
+};
+
+// Mutation hooks with toast notifications
+export const useCreateNode = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (nodeData: NodeCreate) => graphApi.createOrUpdateNode(nodeData),
+    onSuccess: (data) => {
+      toast.success("Node Created Successfully", {
+        description: `Created ${data.entity_type} for ${data.account_holder}`,
+        duration: 4000,
+      });
+
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ["graph-data"] });
+      queryClient.invalidateQueries({ queryKey: ["node-detail"] });
+    },
+    onError: (error: Error, variables) => {
+      toast.error("Failed to Create Node", {
+        description: `Could not create ${variables.entity_type}: ${error.message}`,
+        duration: 6000,
+      });
+    },
+  });
+};
+
+export const useCreateTransaction = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (transactionData: TransactionCreate) =>
+      graphApi.createTransaction(transactionData),
+    onSuccess: (_data, variables) => {
+      toast.success("Transaction Created", {
+        description: `Created transaction from ${variables.from_identifier} to ${variables.to_identifier}`,
+        duration: 4000,
+      });
+
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ["graph-data"] });
+      queryClient.invalidateQueries({ queryKey: ["node-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["node-centered-graph"] });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to Create Transaction", {
+        description: `Could not create transaction: ${error.message}`,
+        duration: 6000,
+      });
+    },
+  });
 };
