@@ -37,6 +37,8 @@ from .schema import (
     ReportRequest,
     TaskResponse, 
     TaskStatus,
+    TaskListResponse,
+    TaskInfo,
     DaftarAkunResponse,
     JaringanSitusResponse,
     StatistikSitusResponse,
@@ -223,6 +225,66 @@ async def retry_batch_processing(request: MultipleSitusRequest):
     except Exception as e:
         logger.error(f"Error retrying batch task: {e}")
         raise HTTPException(status_code=500, detail=f"Gagal retry batch processing: {str(e)}")
+
+@app.get("/tasks", response_model=TaskListResponse)
+async def get_all_tasks():
+    """Get all tasks from Celery with their current status"""
+    try:
+        inspect = celery.control.inspect()
+        
+        # Get active, scheduled, and reserved tasks
+        active_tasks = inspect.active() or {}
+        scheduled_tasks = inspect.scheduled() or {}
+        reserved_tasks = inspect.reserved() or {}
+        
+        all_tasks = []
+        
+        # Process active tasks
+        for worker, tasks in active_tasks.items():
+            for task in tasks:
+                task_info = TaskInfo(
+                    task_id=task['id'],
+                    status='PROCESSING',
+                    result={'message': 'Task sedang diproses', 'worker': worker},
+                    created_at=task.get('time_start')
+                )
+                all_tasks.append(task_info)
+        
+        # Process scheduled tasks
+        for worker, tasks in scheduled_tasks.items():
+            for task in tasks:
+                task_info = TaskInfo(
+                    task_id=task['id'],
+                    status='SCHEDULED',
+                    result={'message': 'Task dijadwalkan', 'worker': worker},
+                    created_at=task.get('eta')
+                )
+                all_tasks.append(task_info)
+        
+        # Process reserved tasks  
+        for worker, tasks in reserved_tasks.items():
+            for task in tasks:
+                task_info = TaskInfo(
+                    task_id=task['id'],
+                    status='RESERVED',
+                    result={'message': 'Task direservasi', 'worker': worker},
+                    created_at=None
+                )
+                all_tasks.append(task_info)
+        
+        return TaskListResponse(
+            status="SUCCESS",
+            tasks=all_tasks,
+            total=len(all_tasks)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting all tasks: {e}")
+        return TaskListResponse(
+            status="ERROR",
+            tasks=[],
+            total=0
+        )
 
 @app.get("/tasks/{task_id}", response_model=TaskStatus)
 async def get_task_status(task_id: str):

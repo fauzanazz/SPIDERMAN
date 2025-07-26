@@ -109,6 +109,18 @@ class StatistikSitusResponse(BaseModel):
     statistik: Optional[StatistikSitus] = Field(None, description="Statistik situs")
     error_message: Optional[str] = Field(None, description="Pesan error jika query gagal")
 
+# Task list response
+class TaskInfo(BaseModel):
+    task_id: str = Field(..., description="ID task")
+    status: str = Field(..., description="Status task")
+    result: Optional[dict] = Field(None, description="Hasil task")
+    created_at: Optional[str] = Field(None, description="Waktu pembuatan task")
+
+class TaskListResponse(BaseModel):
+    status: str = Field(..., description="Status response")
+    tasks: List[TaskInfo] = Field(..., description="Daftar task")
+    total: int = Field(..., description="Total jumlah task")
+
 # Health check response
 class HealthResponse(BaseModel):
     status: str = Field(..., description="Status kesehatan service")

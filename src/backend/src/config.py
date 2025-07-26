@@ -155,16 +155,14 @@ STRATEGIES
 =================
 OUTPUT FORMAT
 =================
-Return a JSON-style list of all visible banks or payment channels. For example:
+Return a JSON-style list of all visible banks only (do not include e-wallets, cryptocurrency, or other payment channels). For example:
 {{
-  "payment_methods": [
+  "banks": [
     "BCA",
     "BRI",
     "Mandiri",
-    "DANA",
-    "OVO",
-    "GoPay",
-    "USDT"
+    "CIMB",
+    "BNI"
   ]
 }}
 
@@ -258,30 +256,22 @@ Upon page load, IMMEDIATELY scan for ALL popup elements:
 
 **STEP 2: SYSTEMATIC POPUP ELIMINATION**
 
-🎯 **CHAT POPUP HANDLING (HIGH PRIORITY)**
-Chat widgets are the most common blockers. Follow this EXACT sequence:
-
-1. **LOCATE CHAT WIDGET** - Usually appears as:
-   - Circular icon in bottom-right corner
-   - Text like "Chat", "Help", "Support", "Live Chat"
-   - Small floating bubble with person/message icon
-   - May have pulsing animation or unread message indicators
-   - **ROOM CHAT**: Large chat panel on right side of page
-   - **LIVE CHAT ROOMS**: Full-width chat sections embedded in page
-   - **SIDEBAR CHATS**: Vertical chat panels along right or left edges
-   - **COMMUNITY CHAT**: Social chat boxes showing user messages
-
-2. **CHAT CLOSURE METHODS** (Try in this exact order):
-   - **Method A**: Look for small 'X' or '−' button on the chat widget itself
-   - **Method B**: For room chats - look for "Hide Chat", "Close Chat", "Minimize Chat" buttons
-   - **Method C**: Right-click on chat widget and look for close/minimize options
-   - **Method D**: Click and DRAG the chat widget to bottom edge of screen
+🎯 **LIVE CHAT POPUP HANDLING (HIGH PRIORITY)**
+Live chat widgets are the most common blockers. Follow this EXACT sequence for handling live chat popups:
+1. **LIVE CHAT CLOSURE METHODS** (Try in this exact order):
+   - **Method A**: **HTML MINIMIZE BUTTONS** - Search for HTML buttons with these specific attributes:
+     - Button with `id="minimize"` - click this button to minimize
+     - Button with `aria-label="Perkecil jendela"` - click this button to minimize
+     - Look for minimize icon buttons (usually ↓ or _ symbols) - click this button to minimize
+   - **Method B**: For live chat windows - look for "Hide Chat", "Close Chat", "Minimize Chat" buttons
+   - **Method C**: Right-click on the live chat widget and look for close/minimize options
+   - **Method D**: Click and DRAG the live chat widget to bottom edge of screen
    - **Method E**: Look for "Minimize" or "Close Chat" text links near the widget
-   - **Method F**: Click on the chat widget to expand it, then look for close button inside
-   - **Method G**: Try double-clicking on the chat widget header/title bar
-   - **Method H**: For room chats - look for collapse/expand arrows (↑ ↓ < >)
+   - **Method F**: Click on the live chat widget to expand it, then look for close button inside
+   - **Method G**: Try double-clicking on the live chat widget header/title bar
+   - **Method H**: For live chat windows - look for collapse/expand arrows (↑ ↓ < >)
 
-3. **ADVANCED CHAT HANDLING**:
+2. **ADVANCED CHAT HANDLING**:
    - If chat opens a larger window, look for 'X' in top-right of that window
    - If chat has tabs, close each tab individually
    - Some chats minimize when you click outside them - try clicking far corners
