@@ -35,7 +35,8 @@ interface NetworkGraphViewProps {
   onFiltersChange: (filters: GraphFilters) => void;
   currentMode: "default" | "selection";
   selectedEntities: Entity[];
-  onEntitiesSelect: (entities: Entity[]) => void;
+  onAppendEntity: (entity: Entity) => void;
+  onRemoveEntity: (entity: Entity) => void;
 }
 
 interface NetworkNode extends d3.SimulationNodeDatum {
@@ -88,7 +89,8 @@ export function NetworkGraphView({
   onFiltersChange,
   currentMode,
   selectedEntities,
-  onEntitiesSelect,
+  onAppendEntity,
+  onRemoveEntity,
 }: NetworkGraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, NetworkEdge> | null>(
@@ -167,6 +169,15 @@ export function NetworkGraphView({
           const entity = convertBackendEntityToFrontend(
             backendEntityWithConnections as BackendEntity
           );
+
+          // Add website information to the entity
+          entity.websites = [cluster.website_name];
+          entity.additional_info = {
+            ...entity.additional_info,
+            cluster: cluster.website_name,
+            gambling_sites: [cluster.website_name],
+          };
+
           const node: NetworkNode = {
             id: backendEntity.id,
             entity,
@@ -195,6 +206,14 @@ export function NetworkGraphView({
         const entity = convertBackendEntityToFrontend(
           backendEntityWithConnections as BackendEntity
         );
+
+        // Standalone entities don't have websites
+        entity.websites = [];
+        entity.additional_info = {
+          ...entity.additional_info,
+          cluster: "standalone",
+        };
+
         const node: NetworkNode = {
           id: backendEntity.id,
           entity,
@@ -317,21 +336,35 @@ export function NetworkGraphView({
   };
 
   // Handle node selection in different modes
+  // Option 1: Remove useCallback entirely (simplest solution)
+  // Just use a regular function - it will be recreated on each render but that's often fine
+  const selectedEntityIds = useMemo(
+    () => selectedEntities.map((e) => e.id),
+    [selectedEntities]
+  );
+
   const handleNodeClick = useCallback(
     (_event: MouseEvent, node: NetworkNode) => {
+      console.log("Node clicked:", {
+        mode: currentMode,
+        clickedNode: node.entity.id,
+        currentlySelected: selectedEntityIds,
+        selectedEntity: selectedEntity?.id,
+      });
+
       if (currentMode === "selection") {
         // Selection mode: add/remove from selected entities
-        const isSelected = selectedEntities.some(
-          (e) => e.id === node.entity.id
-        );
+        const isSelected = selectedEntityIds.includes(node.entity.id);
+        console.log("Selection mode click:", {
+          nodeId: node.entity.id,
+          isSelected,
+          selectedCount: selectedEntityIds.length,
+        });
+
         if (isSelected) {
-          // Remove from selection
-          onEntitiesSelect(
-            selectedEntities.filter((e) => e.id !== node.entity.id)
-          );
+          onRemoveEntity(node.entity);
         } else {
-          // Add to selection
-          onEntitiesSelect([...selectedEntities, node.entity]);
+          onAppendEntity(node.entity);
         }
       } else {
         // Default mode: select single entity or clear if same entity clicked
@@ -346,9 +379,10 @@ export function NetworkGraphView({
     },
     [
       currentMode,
-      selectedEntities,
+      selectedEntityIds,
       selectedEntity,
-      onEntitiesSelect,
+      onAppendEntity,
+      onRemoveEntity,
       onEntitySelect,
     ]
   );
@@ -663,16 +697,19 @@ export function NetworkGraphView({
       .enter()
       .append("line")
       .attr("stroke", (d: NetworkEdge) => {
-        // If an entity is selected, highlight edges connected to it
+        // If an entity is selected, highlight edges connected to it with directional colors
         if (selectedEntity && currentMode === "default") {
-          const isConnectedToSelected =
-            (typeof d.source === "string" ? d.source : d.source.id) ===
-              selectedEntity.id ||
-            (typeof d.target === "string" ? d.target : d.target.id) ===
-              selectedEntity.id;
+          const sourceId =
+            typeof d.source === "string" ? d.source : d.source.id;
+          const targetId =
+            typeof d.target === "string" ? d.target : d.target.id;
 
-          if (isConnectedToSelected) {
-            return "#10b981"; // Green for edges connected to selected entity
+          // Red for both incoming and outgoing edges from/to the selected entity
+          if (
+            sourceId === selectedEntity.id ||
+            targetId === selectedEntity.id
+          ) {
+            return "#dc2626"; // Red for edges connected to selected entity
           }
         }
 
@@ -692,12 +729,13 @@ export function NetworkGraphView({
       .attr("stroke-opacity", (d: NetworkEdge) => {
         // If an entity is selected, make connected edges more prominent
         if (selectedEntity && currentMode === "default") {
-          const isConnectedToSelected =
-            (typeof d.source === "string" ? d.source : d.source.id) ===
-              selectedEntity.id ||
-            (typeof d.target === "string" ? d.target : d.target.id) ===
-              selectedEntity.id;
+          const sourceId =
+            typeof d.source === "string" ? d.source : d.source.id;
+          const targetId =
+            typeof d.target === "string" ? d.target : d.target.id;
 
+          const isConnectedToSelected =
+            sourceId === selectedEntity.id || targetId === selectedEntity.id;
           return isConnectedToSelected ? 0.9 : 0.3; // Higher opacity for connected edges
         }
         return 0.6; // Default opacity
@@ -705,12 +743,13 @@ export function NetworkGraphView({
       .attr("stroke-width", (d: NetworkEdge) => {
         // If an entity is selected, make connected edges thicker
         if (selectedEntity && currentMode === "default") {
-          const isConnectedToSelected =
-            (typeof d.source === "string" ? d.source : d.source.id) ===
-              selectedEntity.id ||
-            (typeof d.target === "string" ? d.target : d.target.id) ===
-              selectedEntity.id;
+          const sourceId =
+            typeof d.source === "string" ? d.source : d.source.id;
+          const targetId =
+            typeof d.target === "string" ? d.target : d.target.id;
 
+          const isConnectedToSelected =
+            sourceId === selectedEntity.id || targetId === selectedEntity.id;
           return isConnectedToSelected
             ? Math.max(3, d.strength * 5)
             : Math.max(1, d.strength * 2);
@@ -901,39 +940,27 @@ export function NetworkGraphView({
         .attr("fill", "none")
         .attr("stroke", (d) => {
           const node = d as NetworkNode;
-          if (currentMode === "selection") {
-            return selectedEntities.some((e) => e.id === node.entity.id)
-              ? "#10b981"
-              : "transparent";
-          } else {
-            return selectedEntity?.id === node.entity.id
-              ? "#10b981"
-              : "transparent";
-          }
+          const isSelected = selectedEntities.some(
+            (e) => e.id === node.entity.id
+          );
+
+          return isSelected ? "#10b981" : "transparent";
         })
         .attr("stroke-width", 3)
         .attr("stroke-dasharray", "5,5")
         .attr("pointer-events", "none")
         .style("opacity", (d) => {
           const node = d as NetworkNode;
-          if (currentMode === "selection") {
-            return selectedEntities.some((e) => e.id === node.entity.id)
-              ? 0.8
-              : 0;
-          } else {
-            return selectedEntity?.id === node.entity.id ? 0.8 : 0;
-          }
+          const isSelected = selectedEntities.some(
+            (e) => e.id === node.entity.id
+          );
+          return isSelected ? 0.8 : 0;
         });
     } else {
       // Remove selection borders if not in selection mode
       const nodeGroups = d3.select(svgRef.current).selectAll("g.node");
       nodeGroups.selectAll(".selection-border").remove();
     }
-
-    console.log("Selection visual update", {
-      currentMode,
-      selectedCount: selectedEntities.length,
-    });
   }, [selectedEntities, selectedEntity, currentMode, getNodeSize]);
 
   useEffect(() => {
@@ -1257,6 +1284,12 @@ export function NetworkGraphView({
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-0.5 bg-blue-500"></div>
                   <span className="text-xs text-white">Terhubung</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-0.5 bg-red-600"></div>
+                  <span className="text-xs text-white">
+                    Terpilih (Masuk/Keluar)
+                  </span>
                 </div>
               </div>
             </div>

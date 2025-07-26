@@ -44,6 +44,7 @@ type Entity = {
   cryptocurrency?: string;
   wallet_type?: string;
   phone_provider?: string;
+  websites?: string[]; // List of gambling sites where this entity is featured
   additional_info?: Record<string, string | string[]>; // Any other backend-specific fields
 };
 
@@ -61,7 +62,7 @@ const SpecificEntityInformation = {
     "Permata",
     "Seabank",
   ],
-  [EntityType.E_WALLET]: ["DANA", "Gopay", "LinkAja", "OVO","ShopeePay"],
+  [EntityType.E_WALLET]: ["DANA", "Gopay", "LinkAja", "OVO", "ShopeePay"],
   [EntityType.PHONE_NUMBER]: ["Simpati", "XL"],
   [EntityType.QRIS]: ["QRIS"],
   [EntityType.CRYPTO_WALLET]: ["Bitcoin", "Ethereum", "USDT", "USDC", "BNB"],

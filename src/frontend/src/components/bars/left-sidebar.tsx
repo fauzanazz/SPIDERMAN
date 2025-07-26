@@ -9,7 +9,6 @@ import {
   Phone,
   Calendar,
   AlertTriangle,
-  Eye,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -49,21 +48,6 @@ interface LeftSidebarProps {
   onToggleCollapse: () => void;
   onEntitySelect?: (entity: Entity) => void;
 }
-
-// Helper function to convert EntityNode to BackendEntity format
-const entityNodeToBackendEntity = (entityNode: EntityNode): BackendEntity => ({
-  ...entityNode,
-  entity_type: entityNode.entity_type,
-  account_holder: entityNode.account_holder,
-  connected_entities: [], // EntityNode doesn't have this, so we provide empty array
-  connections: entityNode.connections || 0,
-  specific_information: entityNode.specific_information || "Unknown",
-  id: entityNode.id,
-  identifier: entityNode.identifier,
-  priority_score: entityNode.priority_score,
-  total_amount: entityNode.total_amount || 0,
-  transactions: entityNode.transactions || 0,
-});
 
 export function LeftSidebar({
   selectedEntity,
@@ -428,50 +412,97 @@ export function LeftSidebar({
                             </CardContent>
                           </Card>
 
-                          {/* Gambling Sites */}
-                          {nodeDetail?.gambling_sites &&
-                            nodeDetail.gambling_sites.length > 0 && (
-                              <Card className="bg-gray-900/50 border-gray-700">
-                                <CardHeader className="pb-3">
-                                  <CardTitle className="text-sm text-gray-400">
-                                    Situs Judi Terkait
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="space-y-2">
-                                    {nodeDetail.gambling_sites.map(
-                                      (site, index) => (
-                                        <div
-                                          key={index}
-                                          className="p-2 border border-gray-700 rounded bg-gray-800/30"
-                                        >
-                                          <p className="text-sm font-medium text-white break-all">
-                                            {site}
-                                          </p>
-                                        </div>
-                                      )
-                                    )}
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            )}
+                          {/* Featured Websites */}
+                          <Card className="bg-gray-900/50 border-gray-700">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm text-gray-400 flex items-center gap-2">
+                                <Globe className="h-4 w-4" />
+                                Website Tempat Akun Ini Tampil
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              {(() => {
+                                // Get website info from multiple sources
+                                const websites =
+                                  entity.websites ||
+                                  entity.additional_info?.websites ||
+                                  entity.additional_info?.gambling_sites ||
+                                  nodeDetail?.gambling_sites ||
+                                  [];
 
-                          <div className="flex gap-2">
-                            <Button
-                              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
-                              size="sm"
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Profil Lengkap
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-gray-600 text-gray-400 hover:bg-gray-800 bg-transparent"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
+                                return websites.length > 0 ? (
+                                  <div className="space-y-2">
+                                    {websites.map((site, index) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center justify-between p-2 border border-gray-700 rounded bg-gray-800/30"
+                                      >
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                          <Globe className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-white break-all font-mono">
+                                              {site}
+                                            </p>
+                                            <p className="text-xs text-gray-400">
+                                              Situs judi online
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() =>
+                                            window.open(
+                                              `https://${site}`,
+                                              "_blank"
+                                            )
+                                          }
+                                          className="text-gray-400 hover:text-white hover:bg-gray-700 h-8 w-8 p-0 flex-shrink-0"
+                                          title="Buka website"
+                                        >
+                                          <ArrowUpRight className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+
+                                    <div className="mt-3 pt-3 border-t border-gray-700">
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-400">
+                                          Total website: {websites.length}
+                                        </span>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="border-gray-600 text-gray-400 hover:bg-gray-800 bg-transparent h-6 px-2"
+                                          onClick={() => {
+                                            const websiteList =
+                                              websites.join("\n");
+                                            navigator.clipboard.writeText(
+                                              websiteList
+                                            );
+                                          }}
+                                          title="Salin daftar website"
+                                        >
+                                          <Download className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-4">
+                                    <Globe className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-400">
+                                      Akun ini tidak tampil di website manapun
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Mungkin merupakan akun agregator atau
+                                      pooling
+                                    </p>
+                                  </div>
+                                );
+                              })()}
+                            </CardContent>
+                          </Card>
                         </TabsContent>
 
                         <TabsContent value="network" className="space-y-4 mt-0">
@@ -493,14 +524,17 @@ export function LeftSidebar({
                                 nodeDetail.connected_entities.length > 0 ? (
                                 <div className="space-y-3">
                                   {nodeDetail.connected_entities.map(
-                                    (connectedEntityNode, index) => {
-                                      // Convert EntityNode to Entity
+                                    (connectedEntityNode: EntityNode, index) => {
+                                      // Convert EntityNode directly to Entity
                                       const connectedEntity =
-                                        convertBackendEntityToFrontend(
-                                          entityNodeToBackendEntity(
-                                            connectedEntityNode
-                                          )
-                                        );
+                                        convertBackendEntityToFrontend({
+                                          ...connectedEntityNode,
+                                          entity_type: connectedEntityNode.entity_type,
+                                          account_holder: connectedEntityNode.account_holder,
+                                          priority_score: connectedEntityNode.priority_score,
+                                          total_amount: connectedEntityNode.total_amount,
+                                          connected_entities: [], // EntityNode doesn't have this field
+                                        } as BackendEntity);
 
                                       return (
                                         <div

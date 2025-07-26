@@ -361,7 +361,10 @@ export function RightSidebar({
                                       ? "default"
                                       : "outline"
                                   }
-                                  onClick={() => onModeChange("default")}
+                                  onClick={() => {
+                                    console.log("Switching to default mode");
+                                    onModeChange("default");
+                                  }}
                                   className={`flex items-center gap-2 ${
                                     currentMode === "default"
                                       ? "bg-blue-600 hover:bg-blue-700 text-white"
@@ -378,7 +381,10 @@ export function RightSidebar({
                                       ? "default"
                                       : "outline"
                                   }
-                                  onClick={() => onModeChange("selection")}
+                                  onClick={() => {
+                                    console.log("Switching to selection mode");
+                                    onModeChange("selection");
+                                  }}
                                   className={`flex items-center gap-2 ${
                                     currentMode === "selection"
                                       ? "bg-green-600 hover:bg-green-700 text-white"

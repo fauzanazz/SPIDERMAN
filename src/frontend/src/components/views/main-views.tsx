@@ -31,6 +31,8 @@ interface MainViewProps {
   selectedEntities?: Entity[];
   onEntitiesSelect?: (entities: Entity[]) => void;
   onFiltersChange?: (filters: GraphFilters) => void;
+  onAppendEntity: (entity: Entity) => void;
+  onRemoveEntity: (entity: Entity) => void;
 }
 
 export function MainView({
@@ -42,8 +44,9 @@ export function MainView({
   onRefreshData,
   currentMode = "default",
   selectedEntities = [],
-  onEntitiesSelect = () => {},
   onFiltersChange = () => {},
+  onAppendEntity,
+  onRemoveEntity,
 }: MainViewProps) {
   // Use backend filters if available, otherwise convert legacy filters
   const activeFilters: GraphFilters = backendFilters || {
@@ -68,7 +71,8 @@ export function MainView({
           onFiltersChange={onFiltersChange}
           currentMode={currentMode}
           selectedEntities={selectedEntities}
-          onEntitiesSelect={onEntitiesSelect}
+          onAppendEntity={onAppendEntity}
+          onRemoveEntity={onRemoveEntity}
         />
       ) : (
         <GeospatialMapView />

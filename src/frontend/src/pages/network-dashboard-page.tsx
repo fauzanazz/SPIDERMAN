@@ -25,6 +25,14 @@ export function NetworkDashboard() {
   );
   const [selectedEntities, setSelectedEntities] = useState<Entity[]>([]);
 
+  // Debug: Track selectedEntities changes
+  useEffect(() => {
+    console.log(
+      "selectedEntities state changed:",
+      selectedEntities.map((e) => e.id)
+    );
+  }, [selectedEntities]);
+
   // React Query hook for batch report generation
   const batchReportQuery = useBatchReport(selectedEntities);
 
@@ -95,7 +103,19 @@ export function NetworkDashboard() {
 
   // Handle multiple entity selection for selection mode
   const handleEntitiesSelect = (entities: Entity[]) => {
+    console.log(
+      "handleEntitiesSelect called with:",
+      entities.map((e) => e.id)
+    );
+    console.log(
+      "Previous selectedEntities:",
+      selectedEntities.map((e) => e.id)
+    );
     setSelectedEntities(entities);
+    console.log(
+      "After setSelectedEntities, should have:",
+      entities.map((e) => e.id)
+    );
   };
 
   // Handle mode change
@@ -141,6 +161,14 @@ export function NetworkDashboard() {
     searchQuery: filters.search_query || "",
   };
 
+  const onAppendEntity = useCallback((entity: Entity) => {
+    setSelectedEntities((prev) => [...prev, entity]);
+  }, []);
+
+  const onRemoveEntity = useCallback((entity: Entity) => {
+    setSelectedEntities((prev) => prev.filter((e) => e.id !== entity.id));
+  }, []);
+
   return (
     <div className="h-screen flex flex-col bg-black">
       <TopBar currentView={currentView} onViewChange={setCurrentView} />
@@ -154,6 +182,8 @@ export function NetworkDashboard() {
           backendFilters={filters}
           onRefreshData={handleRefreshData}
           // Pass new props for selection mode
+          onAppendEntity={onAppendEntity}
+          onRemoveEntity={onRemoveEntity}
           currentMode={currentMode}
           selectedEntities={selectedEntities}
           onEntitiesSelect={handleEntitiesSelect}
