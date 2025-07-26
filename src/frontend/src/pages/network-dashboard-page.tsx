@@ -8,8 +8,8 @@ import { MainView } from "@/components/views/main-views";
 import { TopBar } from "@/components/bars/top-bar";
 import { type GraphFilters } from "@/lib/api/graph-api";
 import type { Entity } from "@/lib/types/entity";
-import { useBatchReport } from "../lib/api/report-api";
 import { filtersToUrlParams, urlParamsToFilters } from "@/lib/utils/url-params";
+import { useBatchReport } from "@/lib/api/report-api";
 
 export function NetworkDashboard() {
   const [currentView, setCurrentView] = useState<"network" | "geospatial">(
@@ -24,14 +24,6 @@ export function NetworkDashboard() {
     "default"
   );
   const [selectedEntities, setSelectedEntities] = useState<Entity[]>([]);
-
-  // Debug: Track selectedEntities changes
-  useEffect(() => {
-    console.log(
-      "selectedEntities state changed:",
-      selectedEntities.map((e) => e.id)
-    );
-  }, [selectedEntities]);
 
   // React Query hook for batch report generation
   const batchReportQuery = useBatchReport(selectedEntities);
