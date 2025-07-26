@@ -56,6 +56,7 @@ class EntityNode(BaseModel):
     created_at: Optional[str] = None
     # Consolidated specific information
     specific_information: Optional[str] = None  # Bank name, crypto type, wallet type, phone provider, etc.
+    oss_key: Optional[str] = None  # OSS key for downloading reports
 
 class Transaction(BaseModel):
     from_node: str

@@ -188,7 +188,8 @@ class GraphDatabaseHandler:
             total_amount=aggregated["total_amount"],
             last_activity=node_props.get("terakhir_update"),
             created_at=node_props.get("created_at"),
-            specific_information=specific_information
+            specific_information=specific_information,
+            oss_key=node_props.get("oss_key")
         )
     
     def get_whole_graph(self, filters: GraphFilters) -> GraphResponse:

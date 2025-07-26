@@ -668,9 +668,8 @@ async def seed_database(num_nodes: int = 100):
     
     This creates:
     - Multiple gambling sites with clustered entities
-    - Bank accounts (50% of nodes, BCA heavy distribution)
-    - Crypto wallets (20% of nodes) 
-    - E-wallets (15% of nodes)
+    - Bank accounts (60% of nodes, BCA heavy distribution)
+    - E-wallets (25% of nodes)
     - Phone numbers (10% of nodes)
     - QRIS codes (5% of nodes)
     - Realistic transaction relationships between entities
