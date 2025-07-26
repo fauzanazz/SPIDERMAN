@@ -663,20 +663,34 @@ export function NetworkGraphView({
       });
     });
 
+    console.log("Graph re-rendering due to data change");
+
     return () => {
       simulation.stop();
     };
   }, [
     graphData,
-    onEntitySelect,
+    isLoading,
     currentMode,
-    selectedEntities,
-    selectedEntity,
     convertToNetworkData,
     handleNodeClick,
-    isLoading,
     isNodeSelected,
   ]);
+
+  // Separate effect to update selection visuals without recreating the graph
+  useEffect(() => {
+    if (!nodesRef.current) return;
+
+    // Update selection highlights
+    nodesRef.current
+      .select(".selection-border")
+      .attr("stroke", (d: NetworkNode) =>
+        isNodeSelected(d) ? "#10b981" : "transparent"
+      )
+      .style("opacity", (d: NetworkNode) => (isNodeSelected(d) ? 0.8 : 0));
+
+    console.log("Selection visual update");
+  }, [selectedEntities, selectedEntity, currentMode, isNodeSelected]);
 
   // Helper function to get logo URL based on specific information
   const getLogoUrl = (entity: Entity) => {
