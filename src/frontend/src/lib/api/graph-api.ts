@@ -30,6 +30,7 @@ export interface EntityNode {
   last_activity?: string;
   created_at?: string;
   specific_information?: string; // Consolidated field for bank_name, wallet_type, etc.
+  oss_key?: string; // OSS key for downloading reports
 }
 
 export interface Transaction {

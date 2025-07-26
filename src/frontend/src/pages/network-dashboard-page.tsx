@@ -1,7 +1,7 @@
 // src/frontend/src/pages/network-dashboard-page.tsx - Updated with selection mode and batch reporting
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { LeftSidebar } from "@/components/bars/left-sidebar";
 import { RightSidebar } from "@/components/bars/right-sidebar";
 import { MainView } from "@/components/views/main-views";
@@ -19,14 +19,14 @@ export function NetworkDashboard() {
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
-  // React Query hook for batch report generation
-  const batchReportMutation = useBatchReport();
-
   // New state for selection mode and batch reporting
   const [currentMode, setCurrentMode] = useState<"default" | "selection">(
     "default"
   );
   const [selectedEntities, setSelectedEntities] = useState<Entity[]>([]);
+
+  // React Query hook for batch report generation
+  const batchReportQuery = useBatchReport(selectedEntities);
 
   // Initialize filters from URL parameters
   const [initialFilters] = useState<GraphFilters>(() => {
@@ -80,12 +80,16 @@ export function NetworkDashboard() {
   };
 
   // Handle draft filter changes (for UI updates before search)
-  const handleDraftFiltersChange = (newDraftFilters: GraphFilters) => {
-    setDraftFilters(newDraftFilters);
-  };
+  const handleDraftFiltersChange = useCallback(
+    (newDraftFilters: GraphFilters) => {
+      setDraftFilters(newDraftFilters);
+      // Don't update actual filters immediately
+    },
+    []
+  );
 
   // Handle entity selection for default mode
-  const handleEntitySelect = (entity: Entity) => {
+  const handleEntitySelect = (entity: Entity | null) => {
     setSelectedEntity(entity);
   };
 
@@ -106,12 +110,12 @@ export function NetworkDashboard() {
   };
 
   // Handle batch report generation using React Query
-  const handleGenerateBatchReport = async (entities: Entity[]) => {
+  const handleGenerateBatchReport = async () => {
     try {
-      await batchReportMutation.mutateAsync(entities);
+      // Use the refetch method from the useQuery hook to trigger batch report generation
+      await batchReportQuery.generateReport();
     } catch (error) {
       console.error("Error generating batch reports:", error);
-      alert("Failed to generate batch reports. Please try again.");
     }
   };
 
@@ -172,6 +176,7 @@ export function NetworkDashboard() {
           draftFilters={draftFilters}
           onDraftFiltersChange={handleDraftFiltersChange}
           selectedEntity={selectedEntity}
+          onEntitySelect={handleEntitySelect}
           collapsed={rightSidebarCollapsed}
           onToggleCollapse={() =>
             setRightSidebarCollapsed(!rightSidebarCollapsed)

@@ -15,6 +15,8 @@ import {
   Play,
   RotateCcw,
   Globe,
+  AlertTriangle,
+  CheckCircle,
 } from "lucide-react";
 import {
   Card,
@@ -48,6 +50,7 @@ import {
   type TaskStatus,
 } from "@/lib/api/task-api";
 import { useTaskContext } from "@/hooks/useTaskContext";
+import { toast } from "sonner";
 
 interface RightSidebarProps {
   filters: GraphFilters;
@@ -55,6 +58,7 @@ interface RightSidebarProps {
   draftFilters: GraphFilters;
   onDraftFiltersChange: (filters: GraphFilters) => void;
   selectedEntity: Entity | null;
+  onEntitySelect: (entity: Entity | null) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
   onRefreshData?: () => void;
@@ -71,6 +75,8 @@ export function RightSidebar({
   onFiltersChange,
   draftFilters,
   onDraftFiltersChange,
+  selectedEntity,
+  onEntitySelect,
   collapsed,
   onToggleCollapse,
   onRefreshData,
@@ -124,6 +130,88 @@ export function RightSidebar({
       });
     } catch (error) {
       console.error("Failed to retry task:", error);
+    }
+  };
+
+  // Validate entities for batch report generation
+  const validateEntitiesForBatchReport = (entities: Entity[]) => {
+    const validationErrors: string[] = [];
+    const warnings: string[] = [];
+
+    // Check for entities without OSS keys
+    const entitiesWithoutOssKey = entities.filter((entity) => !entity.ossKey);
+    if (entitiesWithoutOssKey.length > 0) {
+      validationErrors.push(
+        `${entitiesWithoutOssKey.length} account(s) are not featured on any website and missing OSS key`
+      );
+    }
+
+    // Check for mixed bank names (only for bank accounts)
+    const bankAccounts = entities.filter(
+      (entity) => entity.type === "bank_account"
+    );
+    if (bankAccounts.length > 1) {
+      const bankNames = new Set(
+        bankAccounts.map(
+          (entity) =>
+            entity.bank_name || entity.specificInformation || "Unknown"
+        )
+      );
+
+      if (bankNames.size > 1) {
+        validationErrors.push(
+          `Multiple bank names detected: ${Array.from(bankNames).join(", ")}. Please select accounts from the same bank.`
+        );
+      }
+    }
+
+    // Check for entities with missing specificInformation
+    const entitiesWithoutSpecificInfo = entities.filter(
+      (entity) => !entity.specificInformation && !entity.bank_name
+    );
+    if (entitiesWithoutSpecificInfo.length > 0) {
+      warnings.push(
+        `${entitiesWithoutSpecificInfo.length} entities missing bank/provider information`
+      );
+    }
+
+    return {
+      validationErrors,
+      warnings,
+      isValid: validationErrors.length === 0,
+    };
+  };
+
+  // Enhanced batch report handler with validation
+  const handleValidatedBatchReport = async (entities: Entity[]) => {
+    const validation = validateEntitiesForBatchReport(entities);
+
+    // Show validation errors
+    if (validation.validationErrors.length > 0) {
+      validation.validationErrors.forEach((error) => {
+        toast.error("Batch Report Validation Failed", {
+          description: error,
+          duration: 8000,
+        });
+      });
+      return;
+    }
+
+    // Show warnings but continue
+    if (validation.warnings.length > 0) {
+      validation.warnings.forEach((warning) => {
+        toast.warning("Batch Report Warning", {
+          description: warning,
+          duration: 6000,
+        });
+      });
+    }
+
+    // If validation passes, proceed with original batch report generation
+    try {
+      await onGenerateBatchReport(entities);
+    } catch (error) {
+      console.error("Batch report generation failed:", error);
     }
   };
 
@@ -316,6 +404,50 @@ export function RightSidebar({
                           </CardContent>
                         </Card>
 
+                        {/* Selected Entity (Default Mode) */}
+                        {currentMode === "default" && selectedEntity && (
+                          <Card className="bg-blue-900/20 border-blue-700">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm text-blue-300 font-medium flex items-center justify-between">
+                                Entitas Terpilih
+                                <Button
+                                  onClick={() => onEntitySelect(null)}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-800/20 h-6 w-6 p-0"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                              <div className="text-xs text-blue-400 font-mono break-all">
+                                {selectedEntity.identifier}
+                              </div>
+                              <div className="text-xs text-blue-500">
+                                Tipe: {selectedEntity.type.replace("_", " ")}
+                              </div>
+                              <div className="text-xs text-blue-500">
+                                Pemegang: {selectedEntity.accountHolder}
+                              </div>
+                              <div className="text-xs text-blue-500">
+                                Prioritas: {selectedEntity.priorityScore}
+                              </div>
+                              <div className="text-xs text-blue-500">
+                                Koneksi: {selectedEntity.connections}
+                              </div>
+                              <div className="text-xs text-blue-500">
+                                Transaksi:{" "}
+                                {selectedEntity.transactions.toLocaleString()}
+                              </div>
+                              <div className="text-xs text-blue-500">
+                                Total Jumlah: Rp{" "}
+                                {selectedEntity.totalAmount.toLocaleString()}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
                         {/* Selected Entities */}
                         {currentMode === "selection" && (
                           <Card className="bg-gray-900/50 border-gray-700">
@@ -342,47 +474,149 @@ export function RightSidebar({
                                 </div>
                               ) : (
                                 <>
-                                  <ScrollArea className="max-h-48">
-                                    <div className="space-y-2">
-                                      {selectedEntities.map((entity) => (
-                                        <div
-                                          key={entity.id}
-                                          className="flex items-center justify-between p-2 bg-gray-800/50 rounded text-sm"
-                                        >
-                                          <div className="flex-1 min-w-0">
-                                            <div className="font-mono text-xs text-white truncate">
-                                              {entity.identifier}
+                                  {/* Validation Status */}
+                                  {(() => {
+                                    const validation =
+                                      validateEntitiesForBatchReport(
+                                        selectedEntities
+                                      );
+                                    return (
+                                      <div className="space-y-2">
+                                        {validation.validationErrors.length >
+                                          0 && (
+                                          <div className="bg-red-900/30 border border-red-700/50 rounded p-2 space-y-1">
+                                            <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
+                                              <AlertTriangle className="h-3 w-3" />
+                                              Validation Errors
                                             </div>
-                                            <div className="text-xs text-gray-400">
-                                              {entity.type.replace("_", " ")} •{" "}
-                                              {entity.accountHolder}
-                                            </div>
-                                          </div>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                              onEntitiesSelect(
-                                                selectedEntities.filter(
-                                                  (e) => e.id !== entity.id
-                                                )
+                                            {validation.validationErrors.map(
+                                              (error, index) => (
+                                                <div
+                                                  key={index}
+                                                  className="text-xs text-red-300 ml-5"
+                                                >
+                                                  • {error}
+                                                </div>
                                               )
-                                            }
-                                            className="text-red-400 hover:text-red-300 hover:bg-red-800/20 h-6 w-6 p-0 ml-2"
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {validation.warnings.length > 0 && (
+                                          <div className="bg-yellow-900/30 border border-yellow-700/50 rounded p-2 space-y-1">
+                                            <div className="flex items-center gap-2 text-yellow-400 text-xs font-medium">
+                                              <AlertTriangle className="h-3 w-3" />
+                                              Warnings
+                                            </div>
+                                            {validation.warnings.map(
+                                              (warning, index) => (
+                                                <div
+                                                  key={index}
+                                                  className="text-xs text-yellow-300 ml-5"
+                                                >
+                                                  • {warning}
+                                                </div>
+                                              )
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {validation.isValid &&
+                                          validation.warnings.length === 0 && (
+                                            <div className="bg-green-900/30 border border-green-700/50 rounded p-2">
+                                              <div className="flex items-center gap-2 text-green-400 text-xs font-medium">
+                                                <CheckCircle className="h-3 w-3" />
+                                                Ready for batch report
+                                                generation
+                                              </div>
+                                            </div>
+                                          )}
+                                      </div>
+                                    );
+                                  })()}
+
+                                  {/* Scrollable Entity List */}
+                                  <div className="max-h-[900px] overflow-hidden">
+                                    <ScrollArea className="h-full">
+                                      <div className="space-y-2 pr-4">
+                                        {selectedEntities.map((entity) => (
+                                          <div
+                                            key={entity.id}
+                                            className="flex items-start justify-between p-3 bg-gray-800/50 rounded text-sm border border-gray-700/50"
                                           >
-                                            <Trash2 className="h-3 w-3" />
-                                          </Button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </ScrollArea>
+                                            <div className="flex-1 min-w-0 space-y-1">
+                                              <div className="font-mono text-xs text-white truncate">
+                                                {entity.identifier}
+                                              </div>
+                                              <div className="text-xs text-gray-400">
+                                                {entity.type.replace("_", " ")}{" "}
+                                                • {entity.accountHolder}
+                                              </div>
+                                              <div className="flex items-center gap-2 text-xs">
+                                                <Badge
+                                                  variant="outline"
+                                                  className="text-xs px-1 py-0 border-gray-600 text-gray-300"
+                                                >
+                                                  {entity.specificInformation ||
+                                                    entity.bank_name ||
+                                                    "Unknown"}
+                                                </Badge>
+                                                {entity.ossKey ? (
+                                                  <Badge
+                                                    variant="outline"
+                                                    className="text-xs px-1 py-0 border-green-600 text-green-400"
+                                                  >
+                                                    OSS Key
+                                                  </Badge>
+                                                ) : (
+                                                  <Badge
+                                                    variant="outline"
+                                                    className="text-xs px-1 py-0 border-red-600 text-red-400"
+                                                  >
+                                                    No OSS Key
+                                                  </Badge>
+                                                )}
+                                              </div>
+                                            </div>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() =>
+                                                onEntitiesSelect(
+                                                  selectedEntities.filter(
+                                                    (e) => e.id !== entity.id
+                                                  )
+                                                )
+                                              }
+                                              className="text-red-400 hover:text-red-300 hover:bg-red-800/20 h-6 w-6 p-0 ml-2 shrink-0"
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </ScrollArea>
+                                  </div>
 
                                   {/* Batch Report Button */}
                                   <Button
                                     onClick={() =>
-                                      onGenerateBatchReport(selectedEntities)
+                                      handleValidatedBatchReport(
+                                        selectedEntities
+                                      )
                                     }
-                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                                    disabled={
+                                      !validateEntitiesForBatchReport(
+                                        selectedEntities
+                                      ).isValid
+                                    }
+                                    className={`w-full text-white ${
+                                      validateEntitiesForBatchReport(
+                                        selectedEntities
+                                      ).isValid
+                                        ? "bg-purple-600 hover:bg-purple-700"
+                                        : "bg-gray-600 cursor-not-allowed"
+                                    }`}
                                     size="sm"
                                   >
                                     <Download className="mr-2 h-4 w-4" />

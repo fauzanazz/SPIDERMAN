@@ -435,12 +435,12 @@ class Neo4jHandler:
             return {}
         
 
-    def seed_test_data(self, num_nodes=100):
+    def seed_test_data(self, num_nodes=24):
         if not self._check_connection():
             logger.warning("Cannot seed demo data - database not connected")
             return {"success": False, "error": "Database not connected"}
             
-        logger.info("🎬 Starting DEMO database seeding with exactly 100 nodes...")
+        logger.info("🎬 Starting simplified hierarchy seeding with 24 nodes...")
         
         # Specific OSS keys as requested
         demo_oss_keys = [
@@ -451,12 +451,11 @@ class Neo4jHandler:
             "EMI_SARPONIKA"
         ]
         
-        # 4 different gambling websites for clustering (reduced from 6)
+        # 3 different gambling websites (one pooling account per website)
         gambling_websites = [
             {"url": "https://judolbola88.com", "name": "JudolBola88"},
             {"url": "https://slotgacor99.net", "name": "SlotGacor99"},
-            {"url": "https://togelking777.id", "name": "TogelKing777"},
-            {"url": "https://casinolive123.co", "name": "CasinoLive123"}
+            {"url": "https://togelking777.id", "name": "TogelKing777"}
         ]
         
         try:
@@ -471,7 +470,7 @@ class Neo4jHandler:
                 session.run(clear_query)
                 
                 # Create all gambling websites
-                logger.info("🎰 Creating 6 gambling websites...")
+                logger.info("🎰 Creating 3 gambling websites...")
                 for site in gambling_websites:
                     site_query = """
                     MERGE (g:SitusJudi {url: $url})
@@ -488,468 +487,231 @@ class Neo4jHandler:
                         "waktu": datetime.now().isoformat()
                     })
                 
-                # Calculate entity distribution for exactly 100 nodes
-                # Layer 1: Player accounts (36 accounts) - Transfer TO the system, not clustered
-                # Layer 2: Hidden intermediary accounts (4 accounts) - Center, receive from multiple websites  
-                # Layer 3: Money pooling accounts (36 accounts) - Featured in websites, clustered (9 per website)
-                # Remaining: Standalone accounts (24 accounts) - Not connected to any website
-                
-                player_accounts = 36      # Layer 1: Players who deposit money
-                hidden_accounts = 4       # Layer 2: Hidden intermediary accounts (center)
-                pooling_accounts = 36     # Layer 3: Money pooling accounts (9 per website × 4 websites)
-                standalone_accounts = 24  # Remaining standalone accounts
-                
-                entities_config = []
-                
-                # Layer 3: Create money pooling accounts for each website (clustered, featured in websites)
-                for i, site in enumerate(gambling_websites):
-                    entities_config.append({
-                        "type": "pooling_bank", 
-                        "count": 6, 
-                        "cluster": f"website_{i}", 
-                        "sites": [site],
-                        "layer": 3
-                    })
-                    entities_config.append({
-                        "type": "pooling_ewallet", 
-                        "count": 2, 
-                        "cluster": f"website_{i}", 
-                        "sites": [site],
-                        "layer": 3
-                    })
-                    entities_config.append({
-                        "type": "pooling_qris", 
-                        "count": 1, 
-                        "cluster": f"website_{i}", 
-                        "sites": [site],
-                        "layer": 3
-                    })
-                
-                # Layer 2: Hidden intermediary accounts (center, not featured in any website)
-                entities_config.append({
-                    "type": "hidden_bank", 
-                    "count": 4, 
-                    "cluster": "hidden", 
-                    "sites": [],
-                    "layer": 2
-                })
-                
-                # Layer 1: Player accounts (not featured in any website, transfers TO the system)
-                entities_config.extend([
-                    {"type": "player_bank", "count": 20, "cluster": "players", "sites": [], "layer": 1},
-                    {"type": "player_ewallet", "count": 12, "cluster": "players", "sites": [], "layer": 1},
-                    {"type": "player_phone", "count": 4, "cluster": "players", "sites": [], "layer": 1}
-                ])
-                
-                # Standalone accounts (not connected to any website or layer)
-                entities_config.extend([
-                    {"type": "standalone_bank", "count": 15, "cluster": "standalone", "sites": [], "layer": 0},
-                    {"type": "standalone_ewallet", "count": 6, "cluster": "standalone", "sites": [], "layer": 0},
-                    {"type": "standalone_phone", "count": 3, "cluster": "standalone", "sites": [], "layer": 0}
-                ])
+                # New simplified structure:
+                # 20 Player Accounts (not featured on any website, transfer to pooling accounts)
+                # 3 Pooling Accounts (each associated with one website, grouped by website)
+                # 1 Layer-2 Account (receives from all pooling accounts, top-level aggregator)
                 
                 created_entities = []
-                hidden_accounts = []      # Layer 2: Hidden intermediary accounts
-                pooling_accounts = []     # Layer 3: Money pooling accounts (featured in websites)
-                player_accounts = []      # Layer 1: Player accounts (deposit money to system)
+                player_account_ids = []     # Track player accounts
+                pooling_account_ids = []    # Track pooling accounts  
+                layer2_account_id = None    # Track the single layer-2 account
                 
                 entity_counter = 0
                 
-                for config in entities_config:
-                    logger.info(f"Creating {config['count']} {config['type']} entities for {config['cluster']} (Layer {config.get('layer', 0)})...")
+                # 1. Create 20 Player Accounts (not featured on any website)
+                logger.info("🎮 Creating 20 player accounts...")
+                bank_names = ["BCA", "BRI", "BNI", "Mandiri", "CIMB Niaga"]
+                
+                for i in range(20):
+                    oss_key = demo_oss_keys[entity_counter % len(demo_oss_keys)]
+                    entity_counter += 1
                     
-                    for i in range(config["count"]):
-                        oss_key = demo_oss_keys[entity_counter % len(demo_oss_keys)]
-                        entity_counter += 1
+                    # Mix of bank accounts and e-wallets for players
+                    if i < 15:  # 15 bank accounts
+                        bank_name = random.choice(bank_names)
+                        account_number = f"{random.randint(1000000000, 9999999999)}"
                         
-                        # Determine entity type and specific settings based on config type
-                        if "bank" in config["type"]:
-                            # Create bank account with specific distribution
-                            bank_names = ["BCA", "BRI", "BNI", "Mandiri", "CIMB Niaga"]
-                            
-                            # Layer-specific bank selection
-                            if config["layer"] == 3:  # Pooling accounts
-                                bank_name = ["BCA", "BRI", "BNI", "Mandiri"][i % 4]  # Rotate through major banks
-                            elif config["layer"] == 2:  # Hidden accounts
-                                bank_name = "CIMB Niaga"  # Use distinctive bank for hidden accounts
-                            else:  # Player and standalone accounts
-                                bank_name = random.choice(bank_names)
-                            
-                            account_number = f"{random.randint(1000000000, 9999999999)}"
-                            
-                            account_query = """
-                            MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
-                            SET a.jenis_akun = 'CHECKING',
-                                a.nama_bank = $nama_bank,
-                                a.pemilik_rekening = $pemilik_rekening,
-                                a.terakhir_update = $waktu,
-                                a.priority_score = $priority_score,
-                                a.oss_key = $oss_key,
-                                a.cluster_id = $cluster_id,
-                                a.layer = $layer,
-                                a.account_role = $account_role,
-                                a.connections = $connections,
-                                a.is_test_data = true
-                            """
-                            
-                            # Layer-specific priority and role
-                            if config["layer"] == 2:  # Hidden accounts
-                                priority_score = random.randint(85, 100)
-                                account_role = "hidden_intermediary"
-                                connections = 8  # High connections for hidden accounts
-                            elif config["layer"] == 3:  # Pooling accounts
-                                priority_score = random.randint(70, 90)
-                                account_role = "money_pooling"
-                                connections = 5  # Medium connections
-                            elif config["layer"] == 1:  # Player accounts
-                                priority_score = random.randint(20, 50)
-                                account_role = "player_deposit"
-                                connections = 1  # Low connections
-                            else:  # Standalone
-                                priority_score = random.randint(10, 40)
-                                account_role = "standalone"
-                                connections = 0
-                            
-                            session.run(account_query, {
-                                "nomor_rekening": account_number,
-                                "nama_bank": bank_name,
-                                "pemilik_rekening": f"{config['type'].title()} {entity_counter}",
-                                "waktu": datetime.now().isoformat(),
-                                "priority_score": priority_score,
-                                "oss_key": oss_key,
-                                "cluster_id": config["cluster"],
-                                "layer": config.get("layer", 0),
-                                "account_role": account_role,
-                                "connections": connections
-                            })
-                            
-                            # Track different account types
-                            if config["layer"] == 2:
-                                hidden_accounts.append(account_number)
-                            elif config["layer"] == 3:
-                                pooling_accounts.append(account_number)
-                            elif config["layer"] == 1:
-                                player_accounts.append(account_number)
-                                
-                            created_entities.append({
-                                "type": "AkunMencurigakan",
-                                "identifier": account_number,
-                                "cluster": config["cluster"],
-                                "layer": config.get("layer", 0),
-                                "role": account_role,
-                                "oss_key": oss_key,
-                                "websites": [site["url"] for site in config["sites"]]
-                            })
-                        
-                        elif "ewallet" in config["type"]:
-                            # Create e-wallet with specific types for different layers
-                            ewallet_types = ["OVO", "DANA", "GoPay", "LinkAja", "ShopeePay"]
-                            
-                            if config["layer"] == 3:  # Pooling accounts
-                                wallet_type = ["OVO", "DANA", "GoPay"][i % 3]  # Rotate through major e-wallets
-                            else:
-                                wallet_type = random.choice(ewallet_types)
-                            
-                            wallet_id = f"{wallet_type}_{random.randint(100000, 999999)}"
-                            
-                            ewallet_query = """
-                            MERGE (e:EWallet {wallet_id: $wallet_id})
-                            SET e.wallet_type = $wallet_type,
-                                e.phone_number = $phone_number,
-                                e.owner_name = $owner_name,
-                                e.registration_date = $waktu,
-                                e.priority_score = $priority_score,
-                                e.oss_key = $oss_key,
-                                e.cluster_id = $cluster_id,
-                                e.layer = $layer,
-                                e.account_role = $account_role,
-                                e.connections = $connections,
-                                e.is_test_data = true
-                            """
-                            
-                            # Layer-specific settings
-                            if config["layer"] == 3:  # Pooling accounts
-                                priority_score = random.randint(65, 85)
-                                account_role = "money_pooling"
-                                connections = 4
-                            elif config["layer"] == 1:  # Player accounts
-                                priority_score = random.randint(15, 45)
-                                account_role = "player_deposit"
-                                connections = 1
-                            else:  # Standalone
-                                priority_score = random.randint(10, 35)
-                                account_role = "standalone"
-                                connections = 0
-                            
-                            session.run(ewallet_query, {
-                                "wallet_id": wallet_id,
-                                "wallet_type": wallet_type,
-                                "phone_number": f"0812{random.randint(10000000, 99999999)}",
-                                "owner_name": f"{config['type'].title()} {entity_counter}",
-                                "waktu": datetime.now().isoformat(),
-                                "priority_score": priority_score,
-                                "oss_key": oss_key,
-                                "cluster_id": config["cluster"],
-                                "layer": config.get("layer", 0),
-                                "account_role": account_role,
-                                "connections": connections
-                            })
-                            
-                            created_entities.append({
-                                "type": "EWallet",
-                                "identifier": wallet_id,
-                                "cluster": config["cluster"],
-                                "layer": config.get("layer", 0),
-                                "role": account_role,
-                                "oss_key": oss_key,
-                                "websites": [site["url"] for site in config["sites"]]
-                            })
-                        
-                        elif "phone" in config["type"]:
-                            # Create phone number entities
-                            phone_providers = ["Telkomsel", "XL", "Indosat", "Tri", "Smartfren"]
-                            provider = random.choice(phone_providers)
-                            phone_number = f"0812{random.randint(10000000, 99999999)}"
-                            
-                            phone_query = """
-                            MERGE (p:PhoneNumber {phone_number: $phone_number})
-                            SET p.provider = $provider,
-                                p.registration_type = 'PREPAID',
-                                p.owner_name = $owner_name,
-                                p.registration_date = $waktu,
-                                p.priority_score = $priority_score,
-                                p.oss_key = $oss_key,
-                                p.cluster_id = $cluster_id,
-                                p.layer = $layer,
-                                p.account_role = $account_role,
-                                p.connections = $connections,
-                                p.is_test_data = true
-                            """
-                            
-                            # Layer-specific settings
-                            if config["layer"] == 1:  # Player accounts
-                                priority_score = random.randint(10, 40)
-                                account_role = "player_deposit"
-                                connections = 1
-                            else:  # Standalone
-                                priority_score = random.randint(5, 30)
-                                account_role = "standalone"
-                                connections = 0
-                            
-                            session.run(phone_query, {
-                                "phone_number": phone_number,
-                                "provider": provider,
-                                "owner_name": f"{config['type'].title()} {entity_counter}",
-                                "waktu": datetime.now().isoformat(),
-                                "priority_score": priority_score,
-                                "oss_key": oss_key,
-                                "cluster_id": config["cluster"],
-                                "layer": config.get("layer", 0),
-                                "account_role": account_role,
-                                "connections": connections
-                            })
-                            
-                            created_entities.append({
-                                "type": "PhoneNumber",
-                                "identifier": phone_number,
-                                "cluster": config["cluster"],
-                                "layer": config.get("layer", 0),
-                                "role": account_role,
-                                "oss_key": oss_key,
-                                "websites": [site["url"] for site in config["sites"]]
-                            })
-                        
-                        elif "qris" in config["type"]:
-                            # Create QRIS code (only for pooling accounts)
-                            qris_code = f"QRIS_{random.randint(1000000, 9999999)}"
-                            merchant_name = f"Merchant {entity_counter}"
-                            
-                            qris_query = """
-                            MERGE (q:QRISCode {qris_code: $qris_code})
-                            SET q.merchant_name = $merchant_name,
-                                q.merchant_category = $category,
-                                q.creation_date = $waktu,
-                                q.priority_score = $priority_score,
-                                q.oss_key = $oss_key,
-                                q.cluster_id = $cluster_id,
-                                q.layer = $layer,
-                                q.account_role = $account_role,
-                                q.connections = $connections,
-                                q.is_test_data = true
-                            """
-                            
-                            categories = ["Food & Beverage", "Retail", "Transportation", "Entertainment", "Services"]
-                            
-                            session.run(qris_query, {
-                                "qris_code": qris_code,
-                                "merchant_name": merchant_name,
-                                "category": random.choice(categories),
-                                "waktu": datetime.now().isoformat(),
-                                "priority_score": random.randint(60, 80),  # QRIS only for pooling
-                                "oss_key": oss_key,
-                                "cluster_id": config["cluster"],
-                                "layer": config.get("layer", 3),
-                                "account_role": "money_pooling",
-                                "connections": 2
-                            })
-                            
-                            pooling_accounts.append(qris_code)  # Track as pooling account
-                            
-                            created_entities.append({
-                                "type": "QRISCode",
-                                "identifier": qris_code,
-                                "cluster": config["cluster"],
-                                "layer": config.get("layer", 3),
-                                "role": "money_pooling",
-                                "oss_key": oss_key,
-                                "websites": [site["url"] for site in config["sites"]]
-                            })
-                        
-                        # Store cluster information for Layer 3 (pooling accounts) only
-                        if config["layer"] == 3 and config["sites"]:
-                            cluster_sites = [site["url"] for site in config["sites"]]
-                            cluster_update_query = f"""
-                            MATCH (e {{is_test_data: true}})
-                            WHERE (e:AkunMencurigakan AND e.nomor_rekening = $identifier) OR
-                                (e:EWallet AND e.wallet_id = $identifier) OR
-                                (e:PhoneNumber AND e.phone_number = $identifier) OR
-                                (e:QRISCode AND e.qris_code = $identifier)
-                            SET e.associated_sites = $sites
-                            """
-                            
-                            session.run(cluster_update_query, {
-                                "identifier": created_entities[-1]["identifier"],
-                                "sites": cluster_sites
-                            })
-                
-                # Create 3-layer hierarchy transaction relationships
-                logger.info("💸 Creating 3-layer money flow pattern...")
-                
-                # Get entities by layer for transaction creation
-                layer_1_entities = [e for e in created_entities if e.get("layer") == 1]  # Player accounts
-                layer_2_entities = [e for e in created_entities if e.get("layer") == 2]  # Hidden intermediaries
-                layer_3_entities = [e for e in created_entities if e.get("layer") == 3]  # Pooling accounts
-                standalone_entities = [e for e in created_entities if e.get("layer") == 0]  # Standalone
-                
-                transaction_count = 0
-                target_transactions = 200
-                
-                # 1. Layer 1 (Players) → Layer 2 (Hidden Intermediaries)
-                logger.info("🎮 Creating Layer 1 → Layer 2 transactions (Players to Hidden Intermediaries)...")
-                for player_entity in layer_1_entities:
-                    # Each player transfers to 1 random hidden intermediary
-                    if layer_2_entities and transaction_count < target_transactions:
-                        hidden_intermediary = random.choice(layer_2_entities)
-                        
-                        transaction_query = """
-                        MATCH (from_entity {is_test_data: true})
-                        MATCH (to_entity {is_test_data: true}) 
-                        WHERE ((from_entity:AkunMencurigakan AND from_entity.nomor_rekening = $from_identifier) OR
-                            (from_entity:EWallet AND from_entity.wallet_id = $from_identifier) OR
-                            (from_entity:PhoneNumber AND from_entity.phone_number = $from_identifier) OR
-                            (from_entity:QRISCode AND from_entity.qris_code = $from_identifier)) AND
-                            ((to_entity:AkunMencurigakan AND to_entity.nomor_rekening = $to_identifier) OR
-                            (to_entity:EWallet AND to_entity.wallet_id = $to_identifier) OR
-                            (to_entity:PhoneNumber AND to_entity.phone_number = $to_identifier) OR
-                            (to_entity:QRISCode AND to_entity.qris_code = $to_identifier))
-                        CREATE (from_entity)-[t:TRANSFERS_TO {
-                            amount: $amount,
-                            timestamp: $timestamp,
-                            transaction_type: 'PLAYER_DEPOSIT',
-                            reference: $reference,
-                            layer_flow: 'L1_TO_L2',
-                            is_test_data: true
-                        }]->(to_entity)
+                        account_query = """
+                        MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
+                        SET a.jenis_akun = 'CHECKING',
+                            a.nama_bank = $nama_bank,
+                            a.pemilik_rekening = $pemilik_rekening,
+                            a.terakhir_update = $waktu,
+                            a.priority_score = $priority_score,
+                            a.oss_key = $oss_key,
+                            a.cluster_id = 'players',
+                            a.connections = 1,
+                            a.is_test_data = true
                         """
                         
-                        try:
-                            session.run(transaction_query, {
-                                "from_identifier": player_entity["identifier"],
-                                "to_identifier": hidden_intermediary["identifier"],
-                                "amount": random.randint(100000, 1000000),  # Player deposits
-                                "timestamp": (datetime.now() - timedelta(days=random.randint(1, 30))).isoformat(),
-                                "reference": f"PLY{random.randint(100000, 999999)}"
-                            })
-                            transaction_count += 1
-                        except Exception as e:
-                            logger.debug(f"L1→L2 transaction failed: {e}")
-                
-                # 2. Layer 2 (Hidden Intermediaries) → Layer 3 (Pooling Accounts) 
-                logger.info("� Creating Layer 2 → Layer 3 transactions (Hidden to Pooling)...")
-                for hidden_entity in layer_2_entities:
-                    # Each hidden intermediary distributes to 3-4 pooling accounts across different websites
-                    pooling_targets = random.sample(layer_3_entities, min(4, len(layer_3_entities)))
-                    
-                    for pooling_entity in pooling_targets:
-                        if transaction_count >= target_transactions:
-                            break
-                            
-                        try:
-                            session.run(transaction_query, {
-                                "from_identifier": hidden_entity["identifier"],
-                                "to_identifier": pooling_entity["identifier"],
-                                "amount": random.randint(500000, 3000000),  # Distribution amounts
-                                "timestamp": (datetime.now() - timedelta(days=random.randint(1, 15))).isoformat(),
-                                "reference": f"HID{random.randint(100000, 999999)}"
-                            })
-                            transaction_count += 1
-                        except Exception as e:
-                            logger.debug(f"L2→L3 transaction failed: {e}")
-                
-                # 3. Standalone accounts → Layer 3 (External deposits to pooling)
-                logger.info("� Creating Standalone → Layer 3 transactions (External to Pooling)...")
-                for standalone_entity in standalone_entities:
-                    # Each standalone makes 1-2 deposits to random pooling accounts
-                    pooling_targets = random.sample(layer_3_entities, min(2, len(layer_3_entities)))
-                    
-                    for pooling_entity in pooling_targets:
-                        if transaction_count >= target_transactions:
-                            break
-                            
-                        try:
-                            session.run(transaction_query, {
-                                "from_identifier": standalone_entity["identifier"],
-                                "to_identifier": pooling_entity["identifier"],
-                                "amount": random.randint(1000000, 5000000),  # Large external deposits
-                                "timestamp": (datetime.now() - timedelta(days=random.randint(1, 20))).isoformat(),
-                                "reference": f"EXT{random.randint(100000, 999999)}"
-                            })
-                            transaction_count += 1
-                        except Exception as e:
-                            logger.debug(f"Standalone→L3 transaction failed: {e}")
-                
-                # 4. Intra-layer transactions for remaining edges
-                logger.info("🔄 Creating remaining intra-layer transactions...")
-                remaining_transactions = target_transactions - transaction_count
-                
-                for _ in range(remaining_transactions):
-                    if transaction_count >= target_transactions:
-                        break
-                    
-                    # Create some transactions within Layer 3 (pooling accounts of same website)
-                    if len(layer_3_entities) > 1:
-                        source_entity = random.choice(layer_3_entities)
-                        # Find pooling accounts from the same website cluster
-                        same_cluster_entities = [e for e in layer_3_entities 
-                                               if e["cluster"] == source_entity["cluster"] 
-                                               and e["identifier"] != source_entity["identifier"]]
+                        session.run(account_query, {
+                            "nomor_rekening": account_number,
+                            "nama_bank": bank_name,
+                            "pemilik_rekening": f"Player {entity_counter}",
+                            "waktu": datetime.now().isoformat(),
+                            "priority_score": random.randint(20, 50),
+                            "oss_key": oss_key
+                        })
                         
-                        if same_cluster_entities:
-                            target_entity = random.choice(same_cluster_entities)
-                            
-                            try:
-                                session.run(transaction_query, {
-                                    "from_identifier": source_entity["identifier"],
-                                    "to_identifier": target_entity["identifier"],
-                                    "amount": random.randint(200000, 1500000),  # Internal pooling transfers
-                                    "timestamp": (datetime.now() - timedelta(days=random.randint(1, 10))).isoformat(),
-                                    "reference": f"POL{random.randint(100000, 999999)}"
-                                })
-                                transaction_count += 1
-                            except Exception as e:
-                                logger.debug(f"Intra-layer transaction failed: {e}")
+                        player_account_ids.append(account_number)
+                        created_entities.append({
+                            "type": "AkunMencurigakan",
+                            "identifier": account_number,
+                            "cluster": "players"
+                        })
+                        
+                    else:  # 5 e-wallets
+                        ewallet_types = ["OVO", "DANA", "GoPay", "LinkAja", "ShopeePay"]
+                        wallet_type = random.choice(ewallet_types)
+                        wallet_id = f"{wallet_type}_{random.randint(100000, 999999)}"
+                        
+                        ewallet_query = """
+                        MERGE (e:EWallet {wallet_id: $wallet_id})
+                        SET e.wallet_type = $wallet_type,
+                            e.phone_number = $phone_number,
+                            e.owner_name = $owner_name,
+                            e.registration_date = $waktu,
+                            e.priority_score = $priority_score,
+                            e.oss_key = $oss_key,
+                            e.cluster_id = 'players',
+                            e.connections = 1,
+                            e.is_test_data = true
+                        """
+                        
+                        session.run(ewallet_query, {
+                            "wallet_id": wallet_id,
+                            "wallet_type": wallet_type,
+                            "phone_number": f"0812{random.randint(10000000, 99999999)}",
+                            "owner_name": f"Player {entity_counter}",
+                            "waktu": datetime.now().isoformat(),
+                            "priority_score": random.randint(15, 45),
+                            "oss_key": oss_key
+                        })
+                        
+                        player_account_ids.append(wallet_id)
+                        created_entities.append({
+                            "type": "EWallet",
+                            "identifier": wallet_id,
+                            "cluster": "players"
+                        })
                 
-                logger.info(f"✅ Created {transaction_count} transaction relationships with 3-layer hierarchy")
+                # 2. Create 3 Pooling Accounts (one per website, each associated with distinct website)
+                logger.info("🏦 Creating 3 pooling accounts (one per website)...")
+                
+                for i, site in enumerate(gambling_websites):
+                    oss_key = demo_oss_keys[entity_counter % len(demo_oss_keys)]
+                    entity_counter += 1
+                    
+                    # Create bank account for pooling
+                    bank_name = ["BCA", "BRI", "BNI"][i]  # Different bank for each pooling account
+                    account_number = f"{random.randint(1000000000, 9999999999)}"
+                    
+                    account_query = """
+                    MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
+                    SET a.jenis_akun = 'CHECKING',
+                        a.nama_bank = $nama_bank,
+                        a.pemilik_rekening = $pemilik_rekening,
+                        a.terakhir_update = $waktu,
+                        a.priority_score = $priority_score,
+                        a.oss_key = $oss_key,
+                        a.cluster_id = $cluster_id,
+                        a.associated_sites = [$site_url],
+                        a.connections = 5,
+                        a.is_test_data = true
+                    """
+                    
+                    session.run(account_query, {
+                        "nomor_rekening": account_number,
+                        "nama_bank": bank_name,
+                        "pemilik_rekening": f"Pooling {site['name']}",
+                        "waktu": datetime.now().isoformat(),
+                        "priority_score": random.randint(70, 90),
+                        "oss_key": oss_key,
+                        "cluster_id": f"website_{i}",
+                        "site_url": site["url"]
+                    })
+                    
+                    pooling_account_ids.append(account_number)
+                    created_entities.append({
+                        "type": "AkunMencurigakan",
+                        "identifier": account_number,
+                        "cluster": f"website_{i}",
+                        "associated_website": site["url"]
+                    })
+                
+                # 3. Create 1 Layer-2 Account (top-level aggregator)
+                logger.info("🔝 Creating 1 layer-2 aggregator account...")
+                
+                oss_key = demo_oss_keys[entity_counter % len(demo_oss_keys)]
+                entity_counter += 1
+                
+                # Use distinctive bank for layer-2 account
+                account_number = f"{random.randint(1000000000, 9999999999)}"
+                
+                account_query = """
+                MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
+                SET a.jenis_akun = 'CHECKING',
+                    a.nama_bank = 'CIMB Niaga',
+                    a.pemilik_rekening = $pemilik_rekening,
+                    a.terakhir_update = $waktu,
+                    a.priority_score = $priority_score,
+                    a.oss_key = $oss_key,
+                    a.cluster_id = 'layer2',
+                    a.connections = 8,
+                    a.is_test_data = true
+                """
+                
+                session.run(account_query, {
+                    "nomor_rekening": account_number,
+                    "pemilik_rekening": "Top Level Aggregator",
+                    "waktu": datetime.now().isoformat(),
+                    "priority_score": random.randint(85, 100),
+                    "oss_key": oss_key
+                })
+                
+                layer2_account_id = account_number
+                created_entities.append({
+                    "type": "AkunMencurigakan",
+                    "identifier": account_number,
+                    "cluster": "layer2"
+                })
+                
+                # Create transaction relationships following the hierarchy pattern
+                logger.info("💸 Creating simplified transaction hierarchy...")
+                
+                transaction_count = 0
+                
+                # Define common transaction query
+                transaction_query = """
+                MATCH (from_entity {is_test_data: true})
+                MATCH (to_entity {is_test_data: true}) 
+                WHERE ((from_entity:AkunMencurigakan AND from_entity.nomor_rekening = $from_identifier) OR
+                       (from_entity:EWallet AND from_entity.wallet_id = $from_identifier)) AND
+                      ((to_entity:AkunMencurigakan AND to_entity.nomor_rekening = $to_identifier) OR
+                       (to_entity:EWallet AND to_entity.wallet_id = $to_identifier))
+                CREATE (from_entity)-[t:TRANSFERS_TO {
+                    amount: $amount,
+                    timestamp: $timestamp,
+                    reference: $reference,
+                    is_test_data: true
+                }]->(to_entity)
+                """
+                
+                # 1. Player Accounts → Pooling Accounts (each player transfers to one pooling account)
+                logger.info("🎮 Creating Player → Pooling transfers...")
+                for player_id in player_account_ids:
+                    # Each player transfers to one random pooling account
+                    pooling_target = random.choice(pooling_account_ids)
+                    
+                    try:
+                        session.run(transaction_query, {
+                            "from_identifier": player_id,
+                            "to_identifier": pooling_target,
+                            "amount": random.randint(500000, 2000000),  # 500k - 2M IDR
+                            "timestamp": (datetime.now() - timedelta(days=random.randint(1, 30))).isoformat(),
+                            "reference": f"PLY{random.randint(100000, 999999)}"
+                        })
+                        transaction_count += 1
+                    except Exception as e:
+                        logger.debug(f"Player→Pooling transaction failed: {e}")
+                
+                # 2. Pooling Accounts → Layer-2 Account (all pooling accounts transfer to the top-level aggregator)
+                logger.info("🏦 Creating Pooling → Layer-2 transfers...")
+                for pooling_id in pooling_account_ids:
+                    try:
+                        session.run(transaction_query, {
+                            "from_identifier": pooling_id,
+                            "to_identifier": layer2_account_id,
+                            "amount": random.randint(2000000, 10000000),  # 2M - 10M IDR (aggregated amounts)
+                            "timestamp": (datetime.now() - timedelta(days=random.randint(1, 15))).isoformat(),
+                            "reference": f"AGG{random.randint(100000, 999999)}"
+                        })
+                        transaction_count += 1
+                    except Exception as e:
+                        logger.debug(f"Pooling→Layer2 transaction failed: {e}")
+                
+                logger.info(f"✅ Created {transaction_count} transaction relationships in simplified hierarchy")
                 
                 # Get final counts
                 count_query = """
@@ -971,12 +733,13 @@ class Neo4jHandler:
                 rel_result = session.run(rel_count_query)
                 rel_counts = {record["rel_type"]: record["count"] for record in rel_result}
                 
-                logger.info("🎬 3-Layer Network Seeding completed successfully!")
+                logger.info("🎬 Simplified hierarchy seeding completed successfully!")
                 logger.info(f"📊 Created nodes: {counts}")
                 logger.info(f"🔗 Created relationships: {rel_counts}")
                 logger.info(f"💸 Total transactions created: {transaction_count}")
-                logger.info(f"🏦 Pooling accounts for money flow: {len(pooling_accounts)}")
-                logger.info(f"� Hidden intermediary accounts: {len(hidden_accounts)}")
+                logger.info(f"🎮 Player accounts: {len(player_account_ids)}")
+                logger.info(f"🏦 Pooling accounts: {len(pooling_account_ids)}")
+                logger.info(f"🔝 Layer-2 account: {layer2_account_id}")
                 
                 return {
                     "success": True,
@@ -986,28 +749,17 @@ class Neo4jHandler:
                     "total_transactions": transaction_count,
                     "gambling_sites": len(gambling_websites),
                     "network_structure": {
-                        "layer_1_players": len([e for e in created_entities if e.get("layer") == 1]),
-                        "layer_2_hidden": len([e for e in created_entities if e.get("layer") == 2]),
-                        "layer_3_pooling": len([e for e in created_entities if e.get("layer") == 3]),
-                        "standalone": len([e for e in created_entities if e.get("layer") == 0])
+                        "player_accounts": len(player_account_ids),
+                        "pooling_accounts": len(pooling_account_ids),
+                        "layer2_account": 1,
+                        "hierarchy": "Players → Pooling Accounts (by website) → Layer-2 Account"
                     },
                     "demo_features": {
-                        "website_clusters": 4,
-                        "pooling_accounts": len(pooling_accounts),
-                        "hidden_accounts": hidden_accounts,
-                        "pooling_accounts_for_report": pooling_accounts[:5],  # Return first 5 for report
+                        "player_accounts": player_account_ids,
+                        "pooling_accounts": pooling_account_ids,
+                        "layer2_account": layer2_account_id,
                         "oss_keys_used": demo_oss_keys,
-                        "money_flow": {
-                            "layer_1_to_layer_2": "Player accounts deposit to hidden intermediaries",
-                            "layer_2_to_layer_3": "Hidden intermediaries distribute to website pooling accounts", 
-                            "layer_clustering": "Only Layer 3 accounts cluster by associated websites"
-                        },
-                        "filtering_examples": {
-                            "bank_bca_count": len([e for e in created_entities if "BCA" in str(e)]),
-                            "ewallet_ovo_count": len([e for e in created_entities if "OVO" in str(e)]),
-                            "phone_telkomsel_count": len([e for e in created_entities if "Telkomsel" in str(e)])
-                        },
-                        "website_urls": [site["url"] for site in gambling_websites]
+                        "money_flow": "Players deposit to pooling accounts grouped by website, then aggregated to layer-2"
                     }
                 }
                 

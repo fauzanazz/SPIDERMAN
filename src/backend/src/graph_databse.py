@@ -265,7 +265,6 @@ class GraphDatabaseHandler:
                            elementId(to_entity) as to_id,
                            t.amount as amount,
                            t.timestamp as timestamp,
-                           t.transaction_type as transaction_type,
                            t.reference as reference
                     ORDER BY t.timestamp DESC
                     """
@@ -277,7 +276,7 @@ class GraphDatabaseHandler:
                             to_node=tx_record["to_id"],
                             amount=tx_record["amount"] or 0.0,
                             timestamp=tx_record["timestamp"] or datetime.now().isoformat(),
-                            transaction_type=tx_record["transaction_type"] or "transfer",
+                            transaction_type="transfer",  # Default type since we removed explicit types
                             reference=tx_record["reference"],
                             direction=TransactionDirection.OUTGOING  # Default, will be corrected in frontend
                         ))
@@ -321,14 +320,12 @@ class GraphDatabaseHandler:
                    target: target,
                    amount: out.amount,
                    timestamp: out.timestamp,
-                   transaction_type: out.transaction_type,
                    reference: out.reference
                }) as outgoing,
                collect(DISTINCT {
                    source: source, 
                    amount: in.amount,
                    timestamp: in.timestamp,
-                   transaction_type: in.transaction_type,
                    reference: in.reference
                }) as incoming,
                collect(DISTINCT target) + collect(DISTINCT source) as connected,
@@ -354,7 +351,7 @@ class GraphDatabaseHandler:
                             to_node=node_id,
                             amount=tx["amount"] or 0.0,
                             timestamp=tx["timestamp"] or datetime.now().isoformat(),
-                            transaction_type=tx["transaction_type"] or "transfer",
+                            transaction_type="transfer",  # Default type since we removed explicit types
                             reference=tx["reference"],
                             direction=TransactionDirection.INCOMING
                         ))
@@ -367,7 +364,7 @@ class GraphDatabaseHandler:
                             to_node=str(tx["target"].element_id),
                             amount=tx["amount"] or 0.0,
                             timestamp=tx["timestamp"] or datetime.now().isoformat(),
-                            transaction_type=tx["transaction_type"] or "transfer",
+                            transaction_type="transfer",  # Default type since we removed explicit types
                             reference=tx["reference"],
                             direction=TransactionDirection.OUTGOING
                         ))
@@ -485,7 +482,6 @@ class GraphDatabaseHandler:
         CREATE (from_entity)-[t:TRANSFERS_TO {
             amount: $amount,
             timestamp: $timestamp,
-            transaction_type: $transaction_type,
             reference: $reference
         }]->(to_entity)
         
@@ -501,7 +497,6 @@ class GraphDatabaseHandler:
                     "to_identifier": transaction_data.to_identifier,
                     "amount": transaction_data.amount,
                     "timestamp": timestamp.isoformat(),
-                    "transaction_type": transaction_data.transaction_type,
                     "reference": transaction_data.reference
                 })
                 
@@ -515,7 +510,7 @@ class GraphDatabaseHandler:
                         to_node=to_entity.id,
                         amount=transaction_data.amount,
                         timestamp=timestamp.isoformat(),
-                        transaction_type=transaction_data.transaction_type,
+                        transaction_type="transfer",  # Default type since we removed explicit types
                         reference=transaction_data.reference,
                         direction=TransactionDirection.OUTGOING
                     )

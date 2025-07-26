@@ -1,7 +1,7 @@
 // src/frontend/src/lib/api/report-api.ts - Batch report generation utility
 import { config } from "@/lib/config";
 import type { Entity } from "@/lib/types/entity";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useEffect } from "react";
 
@@ -126,14 +126,7 @@ export class ReportApiClient {
             accounts: bankEntities.map((entity) => ({
               nomor_rekening: entity.identifier,
               pemilik_rekening: entity.accountHolder,
-              // Try to get OSS key from various possible locations in the entity data
-              oss_key: (() => {
-                const ossKey = entity.additional_info?.oss_key;
-                if (typeof ossKey === "string") return ossKey;
-                if (Array.isArray(ossKey) && ossKey.length > 0)
-                  return ossKey[0];
-                return ""; // Fallback to empty string if no OSS key available
-              })(),
+              oss_key: entity.ossKey || "",
             })),
           };
 
@@ -206,67 +199,108 @@ export class ReportApiClient {
 export const reportApi = new ReportApiClient();
 
 // React Query hooks
-export const useSingleReport = () => {
+export const useSingleReport = (params?: SingleReportParams) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (params: SingleReportParams) => {
+  const query = useQuery({
+    queryKey: ["single-report", params],
+    queryFn: async () => {
+      if (!params) throw new Error("Report parameters are required");
+
       const blob = await reportApi.generateSingleReport(params);
       const timestamp = new Date().toISOString().split("T")[0];
       const filename = `Report_${params.nama_bank}_${params.nomor_rekening}_${timestamp}.pdf`;
       await reportApi.downloadBlob(blob, filename);
       return { success: true, filename, params };
     },
-    onSuccess: (data) => {
+    enabled: false, // Manual triggering
+    staleTime: 0, // Always fetch fresh
+    retry: 2,
+  });
+
+  // Handle success/error notifications using useEffect pattern
+  useEffect(() => {
+    if (query.data && query.isSuccess) {
       toast.success("Report Generated Successfully", {
-        description: `Single report for ${data.params.nama_bank} - ${data.params.nomor_rekening} has been downloaded as ${data.filename}`,
+        description: `Single report for ${query.data.params.nama_bank} - ${query.data.params.nomor_rekening} has been downloaded as ${query.data.filename}`,
         duration: 5000,
       });
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ["reports"] });
-    },
-    onError: (error: Error) => {
+    }
+  }, [query.data, query.isSuccess, queryClient]);
+
+  useEffect(() => {
+    if (query.error) {
       toast.error("Report Generation Failed", {
-        description: `Failed to generate single report: ${error.message}`,
+        description: `Failed to generate single report: ${query.error.message}`,
         duration: 7000,
       });
-      console.error("Error generating single report:", error);
-    },
-  });
+      console.error("Error generating single report:", query.error);
+    }
+  }, [query.error]);
+
+  return {
+    ...query,
+    generateReport: query.refetch,
+  };
 };
 
-export const useBatchReport = () => {
+export const useBatchReport = (entities?: Entity[]) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (entities: Entity[]) => {
+  const query = useQuery({
+    queryKey: ["batch-report", entities],
+    queryFn: async () => {
+      if (!entities || entities.length === 0) {
+        throw new Error("Entities are required for batch report");
+      }
+
       await reportApi.generateBatchReportsFromEntities(entities);
       return { success: true, entitiesCount: entities.length };
     },
-    onSuccess: (data) => {
+    enabled: false, // Manual triggering
+    staleTime: 0, // Always fetch fresh
+    retry: 2,
+  });
+
+  // Handle success/error notifications using useEffect pattern
+  useEffect(() => {
+    if (query.data && query.isSuccess) {
       toast.success("Batch Reports Generated", {
-        description: `Successfully generated batch reports for ${data.entitiesCount} entities`,
+        description: `Successfully generated batch reports for ${query.data.entitiesCount} entities`,
         duration: 5000,
       });
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ["reports"] });
       queryClient.invalidateQueries({ queryKey: ["graph-data"] });
-    },
-    onError: (error: Error) => {
+    }
+  }, [query.data, query.isSuccess, queryClient]);
+
+  useEffect(() => {
+    if (query.error) {
       toast.error("Batch Report Generation Failed", {
-        description: `Failed to generate batch reports: ${error.message}`,
+        description: `Failed to generate batch reports: ${query.error.message}`,
         duration: 7000,
       });
-      console.error("Error generating batch reports:", error);
-    },
-  });
+      console.error("Error generating batch reports:", query.error);
+    }
+  }, [query.error]);
+
+  return {
+    ...query,
+    generateReport: query.refetch,
+  };
 };
 
-export const useBatchReportByBank = () => {
+export const useBatchReportByBank = (request?: BatchReportRequest) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (request: BatchReportRequest) => {
+  const query = useQuery({
+    queryKey: ["batch-report-by-bank", request],
+    queryFn: async () => {
+      if (!request) throw new Error("Batch report request is required");
+
       const blob = await reportApi.generateBatchReport(request);
       const timestamp = new Date().toISOString().split("T")[0];
       const filename = `Batch_Report_${request.nama_bank}_${timestamp}.pdf`;
@@ -278,22 +312,37 @@ export const useBatchReportByBank = () => {
         bankName: request.nama_bank,
       };
     },
-    onSuccess: (data) => {
+    enabled: false, // Manual triggering
+    staleTime: 0, // Always fetch fresh
+    retry: 2,
+  });
+
+  // Handle success/error notifications using useEffect pattern
+  useEffect(() => {
+    if (query.data && query.isSuccess) {
       toast.success("Bank Report Generated", {
-        description: `Batch report for ${data.bankName} with ${data.accountsCount} accounts has been downloaded as ${data.filename}`,
+        description: `Batch report for ${query.data.bankName} with ${query.data.accountsCount} accounts has been downloaded as ${query.data.filename}`,
         duration: 5000,
       });
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ["reports"] });
-    },
-    onError: (error: Error) => {
+    }
+  }, [query.data, query.isSuccess, queryClient]);
+
+  useEffect(() => {
+    if (query.error) {
       toast.error("Bank Report Generation Failed", {
-        description: `Failed to generate bank batch report: ${error.message}`,
+        description: `Failed to generate bank batch report: ${query.error.message}`,
         duration: 7000,
       });
-      console.error("Error generating batch report by bank:", error);
-    },
-  });
+      console.error("Error generating batch report by bank:", query.error);
+    }
+  }, [query.error]);
+
+  return {
+    ...query,
+    generateReport: query.refetch,
+  };
 };
 
 export const useReportStatus = (reportId: string, enabled: boolean = true) => {
@@ -382,11 +431,14 @@ export const useReportQueue = () => {
 };
 
 // Hook for canceling a report
-export const useCancelReport = () => {
+export const useCancelReport = (reportId?: string) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (reportId: string) => {
+  const query = useQuery({
+    queryKey: ["cancel-report", reportId],
+    queryFn: async () => {
+      if (!reportId) throw new Error("Report ID is required");
+
       const response = await fetch(
         `${config.apiURL}/reports/${reportId}/cancel`,
         {
@@ -398,7 +450,14 @@ export const useCancelReport = () => {
       }
       return response.json();
     },
-    onSuccess: (_data, reportId) => {
+    enabled: false, // Manual triggering
+    staleTime: 0, // Always fetch fresh
+    retry: 2,
+  });
+
+  // Handle success/error notifications using useEffect pattern
+  useEffect(() => {
+    if (query.data && query.isSuccess && reportId) {
       toast.success("Report Cancelled", {
         description: `Report ${reportId} has been cancelled successfully`,
         duration: 4000,
@@ -407,22 +466,33 @@ export const useCancelReport = () => {
       queryClient.invalidateQueries({ queryKey: ["report-status", reportId] });
       queryClient.invalidateQueries({ queryKey: ["report-queue"] });
       queryClient.invalidateQueries({ queryKey: ["reports-history"] });
-    },
-    onError: (error: Error, reportId) => {
+    }
+  }, [query.data, query.isSuccess, reportId, queryClient]);
+
+  useEffect(() => {
+    if (query.error && reportId) {
       toast.error("Cancel Report Failed", {
-        description: `Failed to cancel report ${reportId}: ${error.message}`,
+        description: `Failed to cancel report ${reportId}: ${query.error.message}`,
         duration: 5000,
       });
-    },
-  });
+    }
+  }, [query.error, reportId]);
+
+  return {
+    ...query,
+    cancelReport: query.refetch,
+  };
 };
 
 // Hook for retrying a failed report
-export const useRetryReport = () => {
+export const useRetryReport = (reportId?: string) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (reportId: string) => {
+  const query = useQuery({
+    queryKey: ["retry-report", reportId],
+    queryFn: async () => {
+      if (!reportId) throw new Error("Report ID is required");
+
       const response = await fetch(
         `${config.apiURL}/reports/${reportId}/retry`,
         {
@@ -434,7 +504,14 @@ export const useRetryReport = () => {
       }
       return response.json();
     },
-    onSuccess: (_data, reportId) => {
+    enabled: false, // Manual triggering
+    staleTime: 0, // Always fetch fresh
+    retry: 2,
+  });
+
+  // Handle success/error notifications using useEffect pattern
+  useEffect(() => {
+    if (query.data && query.isSuccess && reportId) {
       toast.success("Report Retried", {
         description: `Report ${reportId} has been queued for retry`,
         duration: 4000,
@@ -443,12 +520,20 @@ export const useRetryReport = () => {
       queryClient.invalidateQueries({ queryKey: ["report-status", reportId] });
       queryClient.invalidateQueries({ queryKey: ["report-queue"] });
       queryClient.invalidateQueries({ queryKey: ["reports-history"] });
-    },
-    onError: (error: Error, reportId) => {
+    }
+  }, [query.data, query.isSuccess, reportId, queryClient]);
+
+  useEffect(() => {
+    if (query.error && reportId) {
       toast.error("Retry Report Failed", {
-        description: `Failed to retry report ${reportId}: ${error.message}`,
+        description: `Failed to retry report ${reportId}: ${query.error.message}`,
         duration: 5000,
       });
-    },
-  });
+    }
+  }, [query.error, reportId]);
+
+  return {
+    ...query,
+    retryReport: query.refetch,
+  };
 };

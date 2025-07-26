@@ -23,7 +23,7 @@ interface MainViewProps {
   };
   // New backend filters
   backendFilters?: GraphFilters;
-  onEntitySelect: (entity: Entity) => void;
+  onEntitySelect: (entity: Entity | null) => void;
   selectedEntity: Entity | null;
   onRefreshData?: () => void;
   // New props for selection mode

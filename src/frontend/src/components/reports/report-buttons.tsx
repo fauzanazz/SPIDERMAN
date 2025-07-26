@@ -22,11 +22,25 @@ export function ReportButtons({
   selectedEntities,
   selectedEntity,
 }: ReportButtonsProps) {
-  const [reportId, ] = useState<string>("");
+  const [reportId] = useState<string>("");
 
-  const singleReportMutation = useSingleReport();
-  const batchReportMutation = useBatchReport();
-  const batchReportByBankMutation = useBatchReportByBank();
+  // Prepare single report parameters
+  const singleReportParams = selectedEntity
+    ? {
+        oss_key: selectedEntity.ossKey || "",
+        nomor_rekening: selectedEntity.identifier,
+        pemilik_rekening: selectedEntity.accountHolder,
+        nama_bank:
+          selectedEntity.bank_name ||
+          selectedEntity.specificInformation ||
+          "Unknown",
+      }
+    : undefined;
+
+  // Use the hooks with proper parameters for useQuery pattern
+  const singleReportQuery = useSingleReport(singleReportParams);
+  const batchReportQuery = useBatchReport(selectedEntities);
+  const batchReportByBankQuery = useBatchReportByBank();
 
   // Query for report status (only when reportId is available)
   const { data: reportStatus, isLoading: isStatusLoading } = useReportStatus(
@@ -38,18 +52,8 @@ export function ReportButtons({
   const handleSingleReport = async () => {
     if (!selectedEntity) return;
 
-    const params = {
-      oss_key: (selectedEntity.additional_info?.oss_key as string) || "",
-      nomor_rekening: selectedEntity.identifier,
-      pemilik_rekening: selectedEntity.accountHolder,
-      nama_bank:
-        selectedEntity.bank_name ||
-        selectedEntity.specificInformation ||
-        "Unknown",
-    };
-
     try {
-      await singleReportMutation.mutateAsync(params);
+      await singleReportQuery.generateReport();
     } catch (error) {
       console.error("Failed to generate single report:", error);
     }
@@ -60,7 +64,7 @@ export function ReportButtons({
     if (selectedEntities.length === 0) return;
 
     try {
-      await batchReportMutation.mutateAsync(selectedEntities);
+      await batchReportQuery.generateReport();
     } catch (error) {
       console.error("Failed to generate batch reports:", error);
     }
@@ -70,32 +74,8 @@ export function ReportButtons({
   const handleBatchReportByBank = async () => {
     if (selectedEntities.length === 0) return;
 
-    // Group by bank and generate report for first bank as example
-    const entitiesByBank = selectedEntities.reduce(
-      (acc, entity) => {
-        const bankName =
-          entity.bank_name || entity.specificInformation || "Unknown";
-        if (!acc[bankName]) acc[bankName] = [];
-        acc[bankName].push(entity);
-        return acc;
-      },
-      {} as Record<string, Entity[]>
-    );
-
-    const firstBank = Object.keys(entitiesByBank)[0];
-    const bankEntities = entitiesByBank[firstBank];
-
-    const request = {
-      nama_bank: firstBank,
-      accounts: bankEntities.map((entity) => ({
-        nomor_rekening: entity.identifier,
-        pemilik_rekening: entity.accountHolder,
-        oss_key: (entity.additional_info?.oss_key as string) || "",
-      })),
-    };
-
     try {
-      await batchReportByBankMutation.mutateAsync(request);
+      await batchReportByBankQuery.generateReport();
     } catch (error) {
       console.error("Failed to generate batch report by bank:", error);
     }
@@ -112,11 +92,11 @@ export function ReportButtons({
         {/* Single Report */}
         <Button
           onClick={handleSingleReport}
-          disabled={!selectedEntity || singleReportMutation.isPending}
+          disabled={!selectedEntity || singleReportQuery.isPending}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           size="sm"
         >
-          {singleReportMutation.isPending ? (
+          {singleReportQuery.isPending ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <FileText className="mr-2 h-4 w-4" />
@@ -127,13 +107,11 @@ export function ReportButtons({
         {/* Batch Report */}
         <Button
           onClick={handleBatchReport}
-          disabled={
-            selectedEntities.length === 0 || batchReportMutation.isPending
-          }
+          disabled={selectedEntities.length === 0 || batchReportQuery.isPending}
           className="w-full bg-green-600 hover:bg-green-700 text-white"
           size="sm"
         >
-          {batchReportMutation.isPending ? (
+          {batchReportQuery.isPending ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Download className="mr-2 h-4 w-4" />
@@ -145,12 +123,12 @@ export function ReportButtons({
         <Button
           onClick={handleBatchReportByBank}
           disabled={
-            selectedEntities.length === 0 || batchReportByBankMutation.isPending
+            selectedEntities.length === 0 || batchReportByBankQuery.isPending
           }
           className="w-full bg-purple-600 hover:bg-purple-700 text-white"
           size="sm"
         >
-          {batchReportByBankMutation.isPending ? (
+          {batchReportByBankQuery.isPending ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Download className="mr-2 h-4 w-4" />
@@ -175,19 +153,19 @@ export function ReportButtons({
         )}
 
         {/* Success/Error Messages */}
-        {singleReportMutation.isSuccess && (
+        {singleReportQuery.isSuccess && (
           <div className="text-xs text-green-400">
             Laporan tunggal berhasil dibuat!
           </div>
         )}
-        {batchReportMutation.isSuccess && (
+        {batchReportQuery.isSuccess && (
           <div className="text-xs text-green-400">
             Laporan batch berhasil dibuat!
           </div>
         )}
-        {(singleReportMutation.isError ||
-          batchReportMutation.isError ||
-          batchReportByBankMutation.isError) && (
+        {(singleReportQuery.isError ||
+          batchReportQuery.isError ||
+          batchReportByBankQuery.isError) && (
           <div className="text-xs text-red-400">
             Gagal membuat laporan. Silakan coba lagi.
           </div>

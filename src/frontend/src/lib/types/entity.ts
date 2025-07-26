@@ -37,6 +37,7 @@ type Entity = {
   phoneNumber?: string; // Optional since not all entities have phone numbers
   transactions: number;
   totalAmount: number;
+  ossKey?: string; // OSS key for downloading reports
 
   // Additional backend fields
   bank_name?: string;
@@ -60,7 +61,7 @@ const SpecificEntityInformation = {
     "Permata",
     "Seabank",
   ],
-  [EntityType.E_WALLET]: ["DANA", "Gopay", "LinkAja", "OVO"],
+  [EntityType.E_WALLET]: ["DANA", "Gopay", "LinkAja", "OVO","ShopeePay"],
   [EntityType.PHONE_NUMBER]: ["Simpati", "XL"],
   [EntityType.QRIS]: ["QRIS"],
   [EntityType.CRYPTO_WALLET]: ["Bitcoin", "Ethereum", "USDT", "USDC", "BNB"],
@@ -92,6 +93,7 @@ export type BackendEntity = {
   created_at?: string;
   transactions: number;
   total_amount: number;
+  oss_key?: string; // OSS key for downloading reports
   connected_entities: Entity[]; // Will be populated separately
 };
 export function convertBackendEntityToFrontend(
@@ -146,6 +148,7 @@ export function convertBackendEntityToFrontend(
         : undefined,
     transactions: backendEntity.transactions,
     totalAmount: backendEntity.total_amount,
+    ossKey: backendEntity.oss_key,
   };
 }
 

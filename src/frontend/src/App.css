@@ -38,3 +38,18 @@
 .read-the-docs {
   color: #888;
 }
+
+
+/* Smooth graph transitions */
+.graph-container {
+  transition: opacity 0.3s ease-in-out;
+}
+
+.graph-container.loading {
+  opacity: 0.5;
+}
+
+/* Prevent layout shift on sidebar toggle */
+.sidebar-container {
+  transition: width 0.3s ease-in-out;
+}
