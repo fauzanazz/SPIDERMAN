@@ -12,6 +12,9 @@ import {
   Trash2,
   X,
   Download,
+  Play,
+  RotateCcw,
+  Globe,
 } from "lucide-react";
 import {
   Card,
@@ -36,6 +39,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MultiSelectFilter } from "../ui/multi-select-filter";
 import { type GraphFilters } from "@/lib/api/graph-api";
 import type { Entity } from "@/lib/types/entity";
+import {
+  useStartSiteAnalysis,
+  useTaskStatus,
+  useRetryTask,
+  getTaskStatusBadgeColor,
+  isTaskRunning,
+  type TaskStatus,
+} from "@/lib/api/task-api";
+import { useTaskContext } from "@/hooks/useTaskContext";
 
 interface RightSidebarProps {
   filters: GraphFilters;
@@ -69,6 +81,51 @@ export function RightSidebar({
   onGenerateBatchReport,
 }: RightSidebarProps) {
   const [activeTab, setActiveTab] = useState("mode");
+
+  // Task management state
+  const [newSiteUrl, setNewSiteUrl] = useState("");
+  const { activeTasks, addTask } = useTaskContext();
+
+  // Task API hooks
+  const startSiteAnalysisMutation = useStartSiteAnalysis();
+  const retryTaskMutation = useRetryTask();
+
+  // Handle starting new site analysis
+  const handleStartSiteAnalysis = async () => {
+    if (!newSiteUrl.trim()) return;
+
+    try {
+      const result = await startSiteAnalysisMutation.mutateAsync(
+        newSiteUrl.trim()
+      );
+
+      // Add task to context
+      addTask({
+        task_id: result.task_id,
+        status: "PENDING",
+        result: { message: "Task started", url: newSiteUrl.trim() },
+      });
+
+      setNewSiteUrl(""); // Clear input
+    } catch (error) {
+      console.error("Failed to start site analysis:", error);
+    }
+  };
+
+  // Handle retrying a task
+  const handleRetryTask = async (url: string) => {
+    try {
+      const result = await retryTaskMutation.mutateAsync(url);
+
+      addTask({
+        task_id: result.task_id,
+        status: "PENDING",
+        result: { message: "Task retried", url },
+      });
+    } catch (error) {
+      console.error("Failed to retry task:", error);
+    }
+  };
 
   const handlePriorityLevelChange = (value: string) => {
     let priorityMin: number | undefined;
@@ -172,7 +229,7 @@ export function RightSidebar({
                 onValueChange={setActiveTab}
                 className="flex flex-col h-full"
               >
-                <div className="p-4 border-b border-gray-700  h-[500px]">
+                <div className="p-4 border-b border-gray-700 ">
                   <TabsList className="grid w-full grid-cols-3 bg-gray-900 border-gray-700">
                     <TabsTrigger
                       value="mode"
@@ -194,7 +251,7 @@ export function RightSidebar({
                     </TabsTrigger>
                   </TabsList>
 
-                  <ScrollArea >
+                  <ScrollArea className="h-[800px] overflow-y-auto border-none">
                     <div className="p-4 ">
                       <TabsContent value="mode" className="space-y-4 mt-0">
                         {/* Mode Selector */}
@@ -487,6 +544,104 @@ export function RightSidebar({
                       </TabsContent>
 
                       <TabsContent value="tasks" className="space-y-4 mt-0">
+                        {/* New Site Analysis */}
+                        <Card className="bg-gray-900/50 border-gray-700">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm text-gray-400">
+                              Start New Analysis
+                            </CardTitle>
+                            <CardDescription className="text-xs text-gray-500">
+                              Analyze gambling site for suspicious accounts
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor="site-url"
+                                className="text-gray-400"
+                              >
+                                Website URL
+                              </Label>
+                              <div className="flex space-x-2">
+                                <Input
+                                  id="site-url"
+                                  placeholder="https://example-gambling-site.com"
+                                  value={newSiteUrl}
+                                  onChange={(e) =>
+                                    setNewSiteUrl(e.target.value)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      handleStartSiteAnalysis();
+                                    }
+                                  }}
+                                  className="bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500"
+                                />
+                                <Button
+                                  onClick={handleStartSiteAnalysis}
+                                  disabled={
+                                    !newSiteUrl.trim() ||
+                                    startSiteAnalysisMutation.isPending
+                                  }
+                                  className="bg-green-700 hover:bg-green-600 text-white"
+                                  size="sm"
+                                >
+                                  {startSiteAnalysisMutation.isPending ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Play className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Enter a gambling website URL to analyze for
+                                suspicious payment accounts
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Active Tasks */}
+                        <Card className="bg-gray-900/50 border-gray-700">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm text-gray-400 flex items-center justify-between">
+                              Active Tasks ({activeTasks.length})
+                              <Button
+                                onClick={onRefreshData}
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-400 hover:text-white hover:bg-gray-800 h-6 w-6 p-0"
+                              >
+                                <RefreshCw className="h-3 w-3" />
+                              </Button>
+                            </CardTitle>
+                            <CardDescription className="text-xs text-gray-500">
+                              Background site analysis operations
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {activeTasks.length === 0 ? (
+                              <div className="text-xs text-gray-500 text-center py-4">
+                                No active tasks. Start a new site analysis
+                                above.
+                              </div>
+                            ) : (
+                              <ScrollArea className="max-h-64">
+                                <div className="space-y-2">
+                                  {activeTasks.map((task: TaskStatus) => (
+                                    <TaskStatusCard
+                                      key={task.task_id}
+                                      task={task}
+                                      onRetry={handleRetryTask}
+                                    />
+                                  ))}
+                                </div>
+                              </ScrollArea>
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        {/* Data Operations */}
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm text-gray-400">
@@ -508,35 +663,6 @@ export function RightSidebar({
 
                             <div className="text-xs text-gray-500 text-center">
                               Last updated: Just now
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="bg-gray-900/50 border-gray-700">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm text-gray-400">
-                              Active Tasks
-                            </CardTitle>
-                            <CardDescription className="text-xs text-gray-500">
-                              Background operations
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="flex items-center justify-between p-2 border border-gray-700 rounded bg-gray-800/30">
-                              <div>
-                                <p className="text-sm font-medium text-white">
-                                  Graph Analysis
-                                </p>
-                                <p className="text-xs text-gray-400">
-                                  Computing connections
-                                </p>
-                              </div>
-                              <Badge
-                                variant="secondary"
-                                className="bg-gray-700 text-gray-300"
-                              >
-                                Running
-                              </Badge>
                             </div>
                           </CardContent>
                         </Card>
@@ -619,6 +745,126 @@ export function RightSidebar({
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Task Status Card Component
+interface TaskStatusCardProps {
+  task: TaskStatus;
+  onRetry: (url: string) => void;
+}
+
+function TaskStatusCard({ task, onRetry }: TaskStatusCardProps) {
+  // Use the task status hook to get live updates
+  const { data: taskStatus } = useTaskStatus(task.task_id, true);
+  const currentTask = taskStatus || task;
+
+  const getTaskUrl = () => {
+    if (
+      currentTask.result &&
+      typeof currentTask.result === "object" &&
+      "url" in currentTask.result
+    ) {
+      return currentTask.result.url as string;
+    }
+    return "";
+  };
+
+  const getTaskMessage = () => {
+    if (currentTask.result && typeof currentTask.result === "object") {
+      if ("message" in currentTask.result) {
+        return currentTask.result.message as string;
+      }
+      if ("error" in currentTask.result) {
+        return `Error: ${currentTask.result.error}`;
+      }
+    }
+    return "Processing...";
+  };
+
+  const getResultSummary = () => {
+    if (
+      currentTask.status === "SUCCESS" &&
+      currentTask.result &&
+      typeof currentTask.result === "object"
+    ) {
+      const result = currentTask.result;
+      if ("rekening_ditemukan" in result) {
+        return `Found ${result.rekening_ditemukan} accounts, ${result.crypto_ditemukan || 0} crypto wallets`;
+      }
+    }
+    return null;
+  };
+
+  return (
+    <div
+      className={`flex items-center justify-between p-3 border rounded bg-gray-800/30 ${
+        currentTask.status === "FAILURE"
+          ? "border-red-700"
+          : currentTask.status === "SUCCESS"
+            ? "border-green-700"
+            : "border-gray-700"
+      }`}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-1">
+            {isTaskRunning(currentTask.status) && (
+              <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
+            )}
+            {currentTask.status === "SUCCESS" && (
+              <div className="h-2 w-2 rounded-full bg-green-400" />
+            )}
+            {currentTask.status === "FAILURE" && (
+              <div className="h-2 w-2 rounded-full bg-red-400" />
+            )}
+            <p className="text-sm font-medium text-white truncate">
+              Site Analysis
+            </p>
+          </div>
+          <Badge
+            variant="secondary"
+            className={`text-xs ${getTaskStatusBadgeColor(currentTask.status)}`}
+          >
+            {currentTask.status}
+          </Badge>
+        </div>
+
+        <p className="text-xs text-gray-400 truncate mb-1">
+          {getTaskUrl() || currentTask.task_id}
+        </p>
+
+        <p className="text-xs text-gray-500">{getTaskMessage()}</p>
+
+        {getResultSummary() && (
+          <p className="text-xs text-green-400 mt-1">{getResultSummary()}</p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1 ml-2">
+        {currentTask.status === "FAILURE" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRetry(getTaskUrl())}
+            className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-800/20 h-6 w-6 p-0"
+          >
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+        )}
+
+        {currentTask.status === "SUCCESS" && getTaskUrl() && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.open(getTaskUrl(), "_blank")}
+            className="text-blue-400 hover:text-blue-300 hover:bg-blue-800/20 h-6 w-6 p-0"
+          >
+            <Globe className="h-3 w-3" />
+          </Button>
+        )}
       </div>
     </div>
   );
