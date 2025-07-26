@@ -161,6 +161,10 @@ class IndonesianAccountExtractor:
                 page = await browser.get_current_page()
                 screenshot = await page.screenshot(full_page=True, animations='disabled')
                 filename = f"./screenshots/screenshot_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                
+                # Create screenshots directory if it doesn't exist
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                
                 with open(filename, 'wb') as f:
                     f.write(screenshot)
                 return ActionResult(
@@ -209,12 +213,11 @@ class IndonesianAccountExtractor:
             if screenshot_folder.exists():
                 existing_files = list(screenshot_folder.glob("*.png"))
                 for i, file in enumerate(existing_files):
-                    account_holder_name = self._get_account_holder_name(gambling_data, i)  # includes extension, e.g., "john_doe.png"
                     path = str(file)  # keeps relative path, e.g., "./screenshots/john_doe.png"
 
                     oss_key = await storage.storage_manager.save_file(
                         path,
-                        account_holder_name
+                        f"{gambling_data.bank_accounts[i].account_number}.png"
                     )
                     gambling_data.bank_accounts[i].oss_key = oss_key
                     logger.info(f"📤 [CRAWLER-OSS-SAVE] Screenshot saved to OSS with key: {oss_key}")
