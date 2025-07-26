@@ -77,11 +77,36 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Environment-specific CORS configuration
+def get_allowed_origins():
+    environment = os.getenv("ENVIRONMENT", "development").lower()
+    
+    if environment == "production":
+        production_origins = os.getenv("ALLOWED_ORIGINS", "")
+        if production_origins:
+            origins = [origin.strip() for origin in production_origins.split(",") if origin.strip()]
+            return origins
+        
+        domain = os.getenv("PRODUCTION_DOMAIN")
+        if domain:
+            return [f"https://{domain}", f"https://www.{domain}"]
+        
+        server_ip = os.getenv("SERVER_IP")
+        if server_ip:
+            return [f"http://{server_ip}:8000", f"https://{server_ip}:8000"]
+        
+        return ["https://localhost:8000"]
+    else:
+        return ["*"]
+
+allowed_origins = get_allowed_origins()
+logger.info(f"CORS allowed origins: {allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition"]
 )

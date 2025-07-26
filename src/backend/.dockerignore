@@ -1,0 +1,28 @@
+# Ignore everything by default
+**/*
+
+# Include only necessary files
+!src/
+!pyproject.toml
+!poetry.lock
+!README.md
+!redis.conf
+
+# Exclude specific patterns
+.env*
+.git/
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+env/
+.DS_Store
+Thumbs.db

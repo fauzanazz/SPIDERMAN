@@ -13,6 +13,12 @@ services:
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - ENVIRONMENT=production
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - SERVER_IP=${SERVER_IP}
+      - PRODUCTION_DOMAIN=${PRODUCTION_DOMAIN}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
     depends_on:
       - db
       - redis
@@ -92,12 +98,20 @@ services:
       - app-network
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    sysctls:
+      - net.core.somaxconn=65535
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
 
 volumes:
   neo4j_data:
