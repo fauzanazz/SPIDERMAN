@@ -270,10 +270,22 @@ export const useTaskStatus = (taskId: string, enabled: boolean = true) => {
         task_id,
         status,
         result,
-        created_at: result?.created_at || new Date().toISOString(),
-        url: result?.url,
-        error_message: result?.error_message || result?.error,
-        processing_time: result?.processing_time,
+        created_at: (result && typeof result === 'object' && 'created_at' in result && typeof result.created_at === 'string') 
+          ? result.created_at 
+          : new Date().toISOString(),
+        url: (result && typeof result === 'object' && 'url' in result && typeof result.url === 'string') 
+          ? result.url 
+          : undefined,
+        error_message: (result && typeof result === 'object') 
+          ? (('error_message' in result && typeof result.error_message === 'string') 
+              ? result.error_message 
+              : ('error' in result && typeof result.error === 'string') 
+                ? result.error 
+                : undefined)
+          : undefined,
+        processing_time: (result && typeof result === 'object' && 'processing_time' in result && typeof result.processing_time === 'number') 
+          ? result.processing_time 
+          : undefined,
       };
 
       if (status === "SUCCESS" || status === "FAILURE") {

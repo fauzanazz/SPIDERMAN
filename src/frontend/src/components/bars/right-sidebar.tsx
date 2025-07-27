@@ -1,6 +1,5 @@
-// src/frontend/src/components/bars/right-sidebar.tsx - Updated for backend integration
 "use client";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Filter,
   Monitor,
@@ -79,6 +78,7 @@ interface RightSidebarProps {
 const TaskHistorySection: React.FC = () => {
   const taskHistory = useTaskHistory();
   const [filter, setFilter] = useState<'all' | 'success' | 'failed'>('all');
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const getFilteredHistory = () => {
     switch (filter) {
@@ -91,7 +91,16 @@ const TaskHistorySection: React.FC = () => {
     }
   };
 
-  const filteredHistory = getFilteredHistory();
+  // Force refresh when refreshKey changes - use refreshKey to trigger re-evaluation
+  const filteredHistory = React.useMemo(() => getFilteredHistory(), [refreshKey, filter, taskHistory]);
+
+  // Auto-refresh every 5 seconds to sync with localStorage updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Card className="bg-gray-900/50 border-gray-700">
@@ -103,7 +112,10 @@ const TaskHistorySection: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => taskHistory.clearHistory()}
+            onClick={() => {
+              taskHistory.clearHistory();
+              setRefreshKey(prev => prev + 1);
+            }}
             className="text-red-400 hover:text-red-300 h-6 w-6 p-0"
           >
             <Trash2 className="h-3 w-3" />
@@ -217,9 +229,6 @@ export function RightSidebar({
 
   // Task management state
   const [newSiteUrl, setNewSiteUrl] = useState("");
-  
-  // Task history hook
-  const taskHistory = useTaskHistory();
 
   // Fetch all tasks from backend with 1-minute polling
   const {
