@@ -205,20 +205,20 @@ class GraphDatabaseHandler:
         MATCH (site:SitusJudi)
         MATCH (entity)
         WHERE {where_clause}
-        AND site.url IN entity.associated_sites
+        AND site.url IN coalesce(entity.associated_sites, [])
         WITH site, collect(DISTINCT entity) as entities
         WHERE size(entities) > 0
         RETURN site.url as website_url, 
-               site.nama as website_name,
+               coalesce(site.nama, site.url) as website_name,
                entities
-        ORDER BY site.nama
+        ORDER BY coalesce(site.nama, site.url)
         """
         
         # Query for standalone entities (not associated with any site)
         standalone_query = f"""
         MATCH (entity)
         WHERE {where_clause}
-        AND (entity.associated_sites IS NULL OR size(entity.associated_sites) = 0)
+        AND (entity.associated_sites IS NULL OR size(coalesce(entity.associated_sites, [])) = 0)
         RETURN entity
         ORDER BY coalesce(entity.priority_score, 0) DESC
         """
@@ -284,10 +284,13 @@ class GraphDatabaseHandler:
                 # Calculate totals
                 total_entities = sum(len(cluster.entities) for cluster in clusters) + len(standalone_entities)
                 
-                # Get total transaction count
-                total_tx_query = "MATCH ()-[r:TRANSFERS_TO]->() RETURN count(r) as total_transactions"
-                tx_result = session.run(total_tx_query)
-                total_transactions = tx_result.single()["total_transactions"] or 0
+                # Get total transaction count - handle case where no TRANSFERS_TO relationships exist
+                try:
+                    total_tx_query = "MATCH ()-[r:TRANSFERS_TO]->() RETURN count(r) as total_transactions"
+                    tx_result = session.run(total_tx_query)
+                    total_transactions = tx_result.single()["total_transactions"] or 0
+                except Exception:
+                    total_transactions = 0
                 
                 return GraphResponse(
                     clusters=clusters,

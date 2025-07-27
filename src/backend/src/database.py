@@ -154,6 +154,21 @@ class Neo4jHandler:
                 "CREATE INDEX IF NOT EXISTS FOR (g:SitusJudi) ON (g.waktu_ekstraksi)"
             ]
             
+            # Ensure TRANSFERS_TO relationship type exists to prevent warnings
+            init_queries = [
+                # Create a dummy relationship to ensure TRANSFERS_TO type exists, then remove it
+                "MERGE (dummy1:DummyNode {id: 'temp1'}) MERGE (dummy2:DummyNode {id: 'temp2'}) MERGE (dummy1)-[:TRANSFERS_TO {amount: 0, timestamp: '2024-01-01', reference: 'init', is_dummy: true}]->(dummy2)",
+                "MATCH (n:DummyNode {id: 'temp1'})-[r:TRANSFERS_TO {is_dummy: true}]->(m:DummyNode {id: 'temp2'}) DELETE r, n, m"
+            ]
+            
+            # Execute init queries first
+            for query in init_queries:
+                try:
+                    session.run(query)
+                    logger.debug(f"Executed init query successfully")
+                except Exception as e:
+                    logger.debug(f"Init query failed (expected): {e}")
+            
             for query in queries:
                 try:
                     session.run(query)
@@ -269,7 +284,8 @@ class Neo4jHandler:
         SET a.jenis_akun = $jenis_akun,
             a.nama_bank = $nama_bank,
             a.pemilik_rekening = $pemilik_rekening,
-            a.terakhir_update = $waktu
+            a.terakhir_update = $waktu,
+            a.priority_score = coalesce(a.priority_score, 0)
         WITH g, a, $bank_code as bank_code, $account_type_detail as account_type_detail,
              $min_deposit as min_deposit, $max_deposit as max_deposit, $processing_time as processing_time, $oss_key as oss_key
         SET a.bank_code = CASE WHEN bank_code IS NOT NULL AND bank_code <> '' THEN bank_code ELSE a.bank_code END,
@@ -277,7 +293,8 @@ class Neo4jHandler:
             a.min_deposit = CASE WHEN min_deposit IS NOT NULL THEN min_deposit ELSE a.min_deposit END,
             a.max_deposit = CASE WHEN max_deposit IS NOT NULL THEN max_deposit ELSE a.max_deposit END,
             a.processing_time = CASE WHEN processing_time IS NOT NULL AND processing_time <> '' THEN processing_time ELSE a.processing_time END,
-            a.oss_key = CASE WHEN oss_key IS NOT NULL AND oss_key <> '' THEN oss_key ELSE a.oss_key END
+            a.oss_key = CASE WHEN oss_key IS NOT NULL AND oss_key <> '' THEN oss_key ELSE a.oss_key END,
+            a.associated_sites = coalesce(a.associated_sites, []) + [$site_url]
         WITH g, a
         MERGE (g)-[:MENGGUNAKAN_REKENING]->(a)
         """
@@ -308,7 +325,9 @@ class Neo4jHandler:
         MATCH (g:SitusJudi {url: $site_url})
         MERGE (c:CryptoWallet {alamat_wallet: $alamat_wallet})
         SET c.cryptocurrency = $cryptocurrency,
-            c.terakhir_update = $waktu
+            c.terakhir_update = $waktu,
+            c.priority_score = coalesce(c.priority_score, 0),
+            c.associated_sites = coalesce(c.associated_sites, []) + [$site_url]
         WITH c, $additional_info as additional_info
         SET c.additional_info = CASE WHEN additional_info IS NOT NULL AND additional_info <> '' THEN additional_info ELSE c.additional_info END
         WITH g, c
