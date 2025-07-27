@@ -2,8 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useEffect, useRef } from "react";
-
-const API_BASE_URL = "http://localhost:8000";
+import { config } from "../config";
 
 // Types based on backend schema
 export interface TaskResponse {
@@ -83,13 +82,16 @@ export const getTaskStatusBadgeColor = (status: string) => {
 const taskApi = {
   // Start single site analysis
   async startSiteAnalysis(url: string): Promise<TaskResponse> {
-    const response = await fetch(`${API_BASE_URL}/situs-judi/cari-rekening`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ url }),
-    });
+    const response = await fetch(
+      `${config.apiURL}/situs-judi/cari-rekening`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to start site analysis: ${response.statusText}`);
@@ -100,7 +102,7 @@ const taskApi = {
 
   // Start batch site analysis
   async startBatchAnalysis(urls: string[]): Promise<TaskResponse> {
-    const response = await fetch(`${API_BASE_URL}/situs-judi/cari-batch`, {
+    const response = await fetch(`${config.apiURL}/situs-judi/cari-batch`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -117,7 +119,7 @@ const taskApi = {
 
   // Get task status
   async getTaskStatus(taskId: string): Promise<TaskStatus> {
-    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`);
+    const response = await fetch(`${config.apiURL}/tasks/${taskId}`);
 
     if (!response.ok) {
       throw new Error(`Failed to get task status: ${response.statusText}`);
@@ -128,7 +130,7 @@ const taskApi = {
 
   // Get all tasks
   async getAllTasks(): Promise<TaskListResponse> {
-    const response = await fetch(`${API_BASE_URL}/tasks`);
+    const response = await fetch(`${config.apiURL}/tasks`);
 
     if (!response.ok) {
       throw new Error(`Failed to get tasks: ${response.statusText}`);
@@ -139,7 +141,7 @@ const taskApi = {
 
   // Retry failed task
   async retryTask(url: string): Promise<TaskResponse> {
-    const response = await fetch(`${API_BASE_URL}/situs-judi/retry-url`, {
+    const response = await fetch(`${config.apiURL}/situs-judi/retry-url`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
