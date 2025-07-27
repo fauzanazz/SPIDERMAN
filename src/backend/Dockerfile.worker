@@ -30,7 +30,8 @@ RUN apt-get update && apt-get install -y \
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/home/worker/.cache/ms-playwright
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
@@ -42,7 +43,11 @@ RUN chown -R worker:worker /app && \
     mkdir -p /home/worker/.config && \
     chown -R worker:worker /home/worker
 
-RUN playwright install chromium --with-deps
+# Install Playwright browsers and copy to worker user directory
+RUN playwright install chromium --with-deps && \
+    mkdir -p /home/worker/.cache && \
+    cp -r /root/.cache/ms-playwright /home/worker/.cache/ && \
+    chown -R worker:worker /home/worker/.cache
 
 USER worker
 
