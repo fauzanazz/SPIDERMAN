@@ -218,7 +218,7 @@ class GraphDatabaseHandler:
         WHERE {where_clause}
         AND NOT EXISTS((:SitusJudi)-[]->(entity))
         RETURN entity
-        ORDER BY id(entity)
+        ORDER BY elementId(entity)
         """
         
         clusters = []
