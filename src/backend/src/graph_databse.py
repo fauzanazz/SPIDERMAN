@@ -166,15 +166,15 @@ class GraphDatabaseHandler:
         
         # Determine specific information based on entity type
         specific_information = None
-        if entity_type == "bank_account":
+        if entity_type == EntityType.BANK_ACCOUNT:
             specific_information = node_props.get("nama_bank") or node_props.get("bank_name")
-        elif entity_type == "e_wallet":
+        elif entity_type == EntityType.E_WALLET:
             specific_information = node_props.get("wallet_type")
-        elif entity_type == "crypto_wallet":
+        elif entity_type == EntityType.CRYPTO_WALLET:
             specific_information = node_props.get("cryptocurrency")
-        elif entity_type == "phone_number":
+        elif entity_type == EntityType.PHONE_NUMBER:
             specific_information = node_props.get("phone_provider") or node_props.get("provider")
-        elif entity_type == "qris":
+        elif entity_type == EntityType.QRIS:
             specific_information = "QRIS"
         
         return EntityNode(
@@ -207,16 +207,16 @@ class GraphDatabaseHandler:
         WITH site, collect(DISTINCT entity) as entities
         WHERE size(entities) > 0
         RETURN site.url as website_url, 
-               coalesce(site.name, site.url) as website_name,
+               site.url as website_name,
                entities
-        ORDER BY coalesce(site.name, site.url)
+        ORDER BY site.url
         """
         
         # Query for standalone entities (not associated with any site)
         standalone_query = f"""
         MATCH (entity)
         WHERE {where_clause}
-        AND NOT EXISTS((site:SitusJudi)-[]->(entity))
+        AND NOT EXISTS((:SitusJudi)-[]->(entity))
         RETURN entity
         ORDER BY coalesce(entity.priority_score, 0) DESC
         """
@@ -409,14 +409,14 @@ class GraphDatabaseHandler:
         # Add specific information based on entity type
         if node_data.specific_information:
             # Store in the appropriate field based on entity type for backward compatibility
-            if node_data.entity_type == "bank_account":
+            if node_data.entity_type == EntityType.BANK_ACCOUNT:
                 properties["nama_bank"] = node_data.specific_information
                 properties["bank_name"] = node_data.specific_information
-            elif node_data.entity_type == "crypto_wallet":
+            elif node_data.entity_type == EntityType.CRYPTO_WALLET:
                 properties["cryptocurrency"] = node_data.specific_information
-            elif node_data.entity_type == "e_wallet":
+            elif node_data.entity_type == EntityType.E_WALLET:
                 properties["wallet_type"] = node_data.specific_information
-            elif node_data.entity_type == "phone_number":
+            elif node_data.entity_type == EntityType.PHONE_NUMBER:
                 properties["phone_provider"] = node_data.specific_information
                 properties["provider"] = node_data.specific_information  # Alternative field name
         
