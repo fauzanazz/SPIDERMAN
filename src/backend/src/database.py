@@ -212,7 +212,7 @@ class Neo4jHandler:
             
                 site_query = """
                 MERGE (g:SitusJudi {url: $url})
-                SET g.nama = $nama,
+                SET g.name = $nama,
                     g.waktu_ekstraksi = $waktu,
                     g.original_url = $original_url
                 WITH g, $site_language as site_language, $registration_success as registration_success, $accessibility_notes as accessibility_notes
@@ -293,8 +293,7 @@ class Neo4jHandler:
             a.min_deposit = CASE WHEN min_deposit IS NOT NULL THEN min_deposit ELSE a.min_deposit END,
             a.max_deposit = CASE WHEN max_deposit IS NOT NULL THEN max_deposit ELSE a.max_deposit END,
             a.processing_time = CASE WHEN processing_time IS NOT NULL AND processing_time <> '' THEN processing_time ELSE a.processing_time END,
-            a.oss_key = CASE WHEN oss_key IS NOT NULL AND oss_key <> '' THEN oss_key ELSE a.oss_key END,
-            a.associated_sites = coalesce(a.associated_sites, []) + [$site_url]
+            a.oss_key = CASE WHEN oss_key IS NOT NULL AND oss_key <> '' THEN oss_key ELSE a.oss_key END
         WITH g, a
         MERGE (g)-[:MENGGUNAKAN_REKENING]->(a)
         """
@@ -326,8 +325,7 @@ class Neo4jHandler:
         MERGE (c:CryptoWallet {alamat_wallet: $alamat_wallet})
         SET c.cryptocurrency = $cryptocurrency,
             c.terakhir_update = $waktu,
-            c.priority_score = coalesce(c.priority_score, 0),
-            c.associated_sites = coalesce(c.associated_sites, []) + [$site_url]
+            c.priority_score = coalesce(c.priority_score, 0)
         WITH c, $additional_info as additional_info
         SET c.additional_info = CASE WHEN additional_info IS NOT NULL AND additional_info <> '' THEN additional_info ELSE c.additional_info END
         WITH g, c
@@ -493,7 +491,7 @@ class Neo4jHandler:
                 for site in gambling_websites:
                     site_query = """
                     MERGE (g:SitusJudi {url: $url})
-                    SET g.nama = $nama,
+                    SET g.name = $nama,
                         g.waktu_ekstraksi = $waktu,
                         g.original_url = $url,
                         g.site_language = 'Indonesian',
@@ -629,7 +627,6 @@ class Neo4jHandler:
                             a.priority_score = $priority_score,
                             a.oss_key = $oss_key,
                             a.cluster_id = $cluster_id,
-                            a.associated_sites = [$site_url],
                             a.connections = 5,
                             a.pooling_rank = $pooling_rank,
                             a.is_test_data = true
@@ -786,9 +783,9 @@ class Neo4jHandler:
                 
                 # Get BCA account distribution per website
                 bca_distribution_query = """
-                MATCH (a:AkunMencurigakan {is_test_data: true, nama_bank: 'BCA'})
+                MATCH (site:SitusJudi)-[]->(a:AkunMencurigakan {is_test_data: true, nama_bank: 'BCA'})
                 WHERE a.cluster_id STARTS WITH 'website_'
-                RETURN a.cluster_id as cluster, a.associated_sites[0] as website, count(a) as bca_count
+                RETURN a.cluster_id as cluster, site.url as website, count(a) as bca_count
                 ORDER BY cluster
                 """
                 

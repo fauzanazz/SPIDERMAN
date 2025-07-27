@@ -200,25 +200,23 @@ class GraphDatabaseHandler:
         
         where_clause, params = self._build_filter_conditions(filters)
         
-        # Query for entities grouped by their associated sites (using associated_sites property)
+        # Query for entities grouped by their associated sites (using relationships)
         clustered_query = f"""
-        MATCH (site:SitusJudi)
-        MATCH (entity)
+        MATCH (site:SitusJudi)-[rel]->(entity)
         WHERE {where_clause}
-        AND site.url IN coalesce(entity.associated_sites, [])
         WITH site, collect(DISTINCT entity) as entities
         WHERE size(entities) > 0
         RETURN site.url as website_url, 
-               coalesce(site.nama, site.url) as website_name,
+               coalesce(site.name, site.url) as website_name,
                entities
-        ORDER BY coalesce(site.nama, site.url)
+        ORDER BY coalesce(site.name, site.url)
         """
         
         # Query for standalone entities (not associated with any site)
         standalone_query = f"""
         MATCH (entity)
         WHERE {where_clause}
-        AND (entity.associated_sites IS NULL OR size(coalesce(entity.associated_sites, [])) = 0)
+        AND NOT EXISTS((site:SitusJudi)-[]->(entity))
         RETURN entity
         ORDER BY coalesce(entity.priority_score, 0) DESC
         """

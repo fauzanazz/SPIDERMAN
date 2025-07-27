@@ -848,7 +848,7 @@ async def get_test_data_stats():
             # Get gambling site relationships
             site_rel_query = """
             MATCH (site:SitusJudi {is_test_data: true})-[r]->(entity)
-            RETURN site.nama as site_name, type(r) as rel_type, count(r) as count
+            RETURN coalesce(site.name, site.url) as site_name, type(r) as rel_type, count(r) as count
             ORDER BY site_name, count DESC
             """
             
