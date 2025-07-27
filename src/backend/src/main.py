@@ -137,8 +137,26 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
-    expose_headers=["Content-Disposition"]
+    expose_headers=["Content-Disposition"],
+    max_age=86400  # Cache preflight requests for 24 hours
 )
+
+# Manual OPTIONS handlers for graph endpoints to ensure CORS preflight works
+@app.options("/graph/entities")
+async def options_graph_entities():
+    return Response(status_code=200)
+
+@app.options("/graph/entities/{node_id}")
+async def options_graph_entity_detail(node_id: str):
+    return Response(status_code=200)
+
+@app.options("/graph/transactions")
+async def options_graph_transactions():
+    return Response(status_code=200)
+
+@app.options("/graph/stats")
+async def options_graph_stats():
+    return Response(status_code=200)
 
 @app.post("/situs-judi/cari-rekening", response_model=TaskResponse)
 async def cari_rekening_situs(request: SitusJudiRequest):
