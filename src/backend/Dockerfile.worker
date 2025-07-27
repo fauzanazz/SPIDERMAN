@@ -34,8 +34,6 @@ ENV VIRTUAL_ENV=/app/.venv \
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
-RUN playwright install chromium --with-deps --no-shell
-
 COPY src/ /app/src/
 
 WORKDIR /app
@@ -43,6 +41,8 @@ WORKDIR /app
 RUN chown -R worker:worker /app && \
     mkdir -p /home/worker/.config && \
     chown -R worker:worker /home/worker
+
+RUN playwright install chromium --with-deps
 
 USER worker
 
