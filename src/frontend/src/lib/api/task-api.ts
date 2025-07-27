@@ -2,8 +2,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useEffect, useRef } from "react";
+import { config } from "../config";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = config.apiURL;
 
 // Types based on backend schema
 export interface TaskResponse {
