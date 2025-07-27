@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, HttpUrl
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, HttpUrl, field_validator
+from typing import List, Optional, Dict, Any, Union
 from enum import Enum
+import datetime
 
 
 class EntityType(str, Enum):
@@ -115,6 +116,16 @@ class TaskInfo(BaseModel):
     status: str = Field(..., description="Status task")
     result: Optional[dict] = Field(None, description="Hasil task")
     created_at: Optional[str] = Field(None, description="Waktu pembuatan task")
+    
+    @field_validator('created_at', mode='before')
+    @classmethod
+    def validate_created_at(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, (int, float)):
+            # Convert Unix timestamp to ISO string
+            return datetime.datetime.fromtimestamp(v).isoformat()
+        return str(v)
 
 class TaskListResponse(BaseModel):
     status: str = Field(..., description="Status response")

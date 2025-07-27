@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useEffect, useRef } from "react";
 import { config } from "../config";
+import { TaskHistoryManager, type TaskHistoryItem } from "@/lib/utils/task-history";
 
 const API_BASE_URL = config.apiURL;
 
@@ -77,6 +78,21 @@ export const getTaskStatusBadgeColor = (status: string) => {
       return "bg-yellow-700 text-yellow-200";
     default:
       return "bg-gray-700 text-gray-200";
+  }
+};
+
+export const getTaskStatusDisplayText = (status: string) => {
+  switch (status) {
+    case "SUCCESS":
+      return "BERHASIL";
+    case "FAILURE":
+      return "GAGAL";
+    case "PROCESSING":
+      return "PROSES";
+    case "PENDING":
+      return "MENUNGGU";
+    default:
+      return status;
   }
 };
 
@@ -244,10 +260,29 @@ export const useTaskStatus = (taskId: string, enabled: boolean = true) => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 
-  // Show toast notifications when task status changes
+  // Show toast notifications when task status changes and save to localStorage
   useEffect(() => {
     if (query.data && previousStatusRef.current !== query.data.status) {
-      const { status, task_id } = query.data;
+      const { status, task_id, result } = query.data;
+
+      // Save to localStorage when task starts or updates
+      const taskHistoryItem: TaskHistoryItem = {
+        task_id,
+        status,
+        result,
+        created_at: result?.created_at || new Date().toISOString(),
+        url: result?.url,
+        error_message: result?.error_message || result?.error,
+        processing_time: result?.processing_time,
+      };
+
+      if (status === "SUCCESS" || status === "FAILURE") {
+        // Save completed tasks to localStorage
+        TaskHistoryManager.saveTask(taskHistoryItem);
+      } else {
+        // Update ongoing tasks
+        TaskHistoryManager.updateTask(task_id, taskHistoryItem);
+      }
 
       if (status === "SUCCESS" && previousStatusRef.current !== "SUCCESS") {
         toast.success("Task Completed", {
@@ -509,6 +544,18 @@ export const useTaskPolling = (options?: {
   }, [query.error, enableNotifications]);
 
   return query;
+};
+
+// Hook to get task history from localStorage
+export const useTaskHistory = () => {
+  return {
+    getHistory: () => TaskHistoryManager.getHistory(),
+    getCompletedTasks: () => TaskHistoryManager.getCompletedTasks(),
+    getFailedTasks: () => TaskHistoryManager.getFailedTasks(),
+    getSuccessfulTasks: () => TaskHistoryManager.getSuccessfulTasks(),
+    getTask: (taskId: string) => TaskHistoryManager.getTask(taskId),
+    clearHistory: () => TaskHistoryManager.clearHistory(),
+  };
 };
 
 export default taskApi;

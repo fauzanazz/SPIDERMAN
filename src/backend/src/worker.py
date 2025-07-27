@@ -68,7 +68,12 @@ def _process_single_site(url: str, task_id: str, update_callback=None) -> Dict[s
         storage_success = db_handler.store_gambling_site_data(gambling_data)
         
         if not storage_success:
-            raise Exception("Gagal menyimpan data ke database Neo4j")
+            if not db_handler._check_connection():
+                raise Exception("Gagal menyimpan data ke database Neo4j: Koneksi database terputus")
+            else:
+                logger.error(f"Database storage failed for {url}")
+                logger.error(f"Scraped data summary: Accounts={len(gambling_data.bank_accounts)}, Wallets={len(gambling_data.crypto_wallets)}, Payments={len(gambling_data.payment_gateways)}")
+                raise Exception("Gagal menyimpan data ke database Neo4j: Data tidak valid atau query gagal")
         
         processing_time = time.time() - start_time
         

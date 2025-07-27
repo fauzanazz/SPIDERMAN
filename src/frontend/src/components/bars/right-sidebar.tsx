@@ -17,6 +17,7 @@ import {
   Globe,
   AlertTriangle,
   CheckCircle,
+  Clock,
 } from "lucide-react";
 import {
   Card,
@@ -49,7 +50,9 @@ import {
   // useActiveTasks,    // Available for polling only active tasks more frequently
   // useTaskPolling,    // Available for custom polling intervals
   getTaskStatusBadgeColor,
+  getTaskStatusDisplayText,
   isTaskRunning,
+  useTaskHistory,
   type TaskStatus,
 } from "@/lib/api/task-api";
 import { toast } from "sonner";
@@ -72,6 +75,128 @@ interface RightSidebarProps {
   onGenerateBatchReport: (entities: Entity[]) => Promise<void>;
 }
 
+// Task history section component
+const TaskHistorySection: React.FC = () => {
+  const taskHistory = useTaskHistory();
+  const [filter, setFilter] = useState<'all' | 'success' | 'failed'>('all');
+  
+  const getFilteredHistory = () => {
+    switch (filter) {
+      case 'success':
+        return taskHistory.getSuccessfulTasks();
+      case 'failed':
+        return taskHistory.getFailedTasks();
+      default:
+        return taskHistory.getCompletedTasks();
+    }
+  };
+
+  const filteredHistory = getFilteredHistory();
+
+  return (
+    <Card className="bg-gray-900/50 border-gray-700">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm text-gray-400">
+            Riwayat Task
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => taskHistory.clearHistory()}
+            className="text-red-400 hover:text-red-300 h-6 w-6 p-0"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+        <CardDescription className="text-xs text-gray-500">
+          {filteredHistory.length} task tersimpan
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Filter buttons */}
+        <div className="flex gap-1">
+          <Button
+            variant={filter === 'all' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setFilter('all')}
+            className="h-6 text-xs px-2"
+          >
+            Semua
+          </Button>
+          <Button
+            variant={filter === 'success' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setFilter('success')}
+            className="h-6 text-xs px-2"
+          >
+            Berhasil
+          </Button>
+          <Button
+            variant={filter === 'failed' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setFilter('failed')}
+            className="h-6 text-xs px-2"
+          >
+            Gagal
+          </Button>
+        </div>
+
+        {/* History list */}
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {filteredHistory.length === 0 ? (
+            <div className="text-xs text-gray-500 text-center py-4">
+              Tidak ada riwayat task
+            </div>
+          ) : (
+            filteredHistory.map((task) => (
+              <div
+                key={task.task_id}
+                className={`p-2 rounded border text-xs ${
+                  task.status === 'SUCCESS'
+                    ? 'border-green-700 bg-green-900/20'
+                    : 'border-red-700 bg-red-900/20'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <Badge
+                    variant="secondary"
+                    className={`text-xs ${getTaskStatusBadgeColor(task.status)}`}
+                  >
+                    {getTaskStatusDisplayText(task.status)}
+                  </Badge>
+                  <span className="text-gray-500">
+                    {task.completed_at 
+                      ? new Date(task.completed_at).toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : 'N/A'
+                    }
+                  </span>
+                </div>
+                <div className="text-gray-400 truncate">
+                  {task.url || task.task_id}
+                </div>
+                {task.error_message && (
+                  <div className="text-red-400 text-xs mt-1 truncate">
+                    {task.error_message}
+                  </div>
+                )}
+                {task.processing_time && (
+                  <div className="text-gray-500 text-xs mt-1">
+                    {task.processing_time.toFixed(1)}s
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export function RightSidebar({
   filters,
   onFiltersChange,
@@ -92,6 +217,9 @@ export function RightSidebar({
 
   // Task management state
   const [newSiteUrl, setNewSiteUrl] = useState("");
+  
+  // Task history hook
+  const taskHistory = useTaskHistory();
 
   // Fetch all tasks from backend with 1-minute polling
   const {
@@ -331,7 +459,7 @@ export function RightSidebar({
                 className="flex flex-col h-full"
               >
                 <div className="p-4 border-b border-gray-700 ">
-                  <TabsList className="grid w-full grid-cols-3 bg-gray-900 border-gray-700">
+                  <TabsList className="grid w-full grid-cols-4 bg-gray-900 border-gray-700">
                     <TabsTrigger
                       value="mode"
                       className="p-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
@@ -349,6 +477,12 @@ export function RightSidebar({
                       className="p-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
                     >
                       <Monitor className="h-4 w-4" />
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="history"
+                      className="p-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400"
+                    >
+                      <Clock className="h-4 w-4" />
                     </TabsTrigger>
                   </TabsList>
 
@@ -925,6 +1059,10 @@ export function RightSidebar({
                         </Card>
                       </TabsContent>
 
+                      <TabsContent value="history" className="space-y-4 mt-0">
+                        <TaskHistorySection />
+                      </TabsContent>
+
                       {/* <TabsContent value="reports" className="space-y-4 mt-0">
                         <Card className="bg-gray-900/50 border-gray-700">
                           <CardHeader className="pb-3">
@@ -1085,7 +1223,7 @@ function TaskStatusCard({ task, onRetry }: TaskStatusCardProps) {
             variant="secondary"
             className={`text-xs ${getTaskStatusBadgeColor(currentTask.status)}`}
           >
-            {currentTask.status}
+            {getTaskStatusDisplayText(currentTask.status)}
           </Badge>
         </div>
 

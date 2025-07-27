@@ -203,6 +203,14 @@ class Neo4jHandler:
         # Skip if no valid data to store
         if not valid_bank_accounts and not valid_crypto_wallets and not valid_payment_gateways:
             logger.warning(f"[VALIDATION] No valid data to store for site: {site_domain}")
+            logger.warning(f"[VALIDATION] Original data counts - Accounts: {len(data.bank_accounts)}, Wallets: {len(data.crypto_wallets)}, Payments: {len(data.payment_gateways)}")
+            # Log the first few items to see what validation is failing
+            if data.bank_accounts:
+                sample_account = data.bank_accounts[0]
+                logger.warning(f"[VALIDATION] Sample account - Number: '{sample_account.account_number}', Bank: '{sample_account.bank_name}', Holder: '{sample_account.account_holder}'")
+            if data.crypto_wallets:
+                sample_wallet = data.crypto_wallets[0]
+                logger.warning(f"[VALIDATION] Sample wallet - Address: '{sample_wallet.wallet_address}', Crypto: '{sample_wallet.cryptocurrency}'")
             return False
     
             

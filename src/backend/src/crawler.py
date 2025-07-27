@@ -214,10 +214,19 @@ class IndonesianAccountExtractor:
             
             # Parse the result
             logger.debug(f"🔍 [CRAWLER-PARSE] Parsing hasil agent untuk: {url}")
+            final_result = result.final_result()
+            logger.debug(f"🔍 [CRAWLER-RESULT-TYPE] Result type: {type(final_result)}")
+            logger.debug(f"🔍 [CRAWLER-RESULT-VALUE] Result value: {final_result}")
+            
             try:
-                gambling_data: GamblingSiteData = GamblingSiteData.model_validate_json(result.final_result())
+                if final_result is None:
+                    logger.error(f"❌ [CRAWLER-NULL-RESULT] Agent returned None for {url}")
+                    return self._create_error_result(url, "Agent returned null result")
+                
+                gambling_data: GamblingSiteData = GamblingSiteData.model_validate_json(final_result)
             except Exception as parse_error:
                 logger.error(f"❌ [CRAWLER-PARSE-FAILED] Gagal parse JSON untuk {url}: {str(parse_error)}")
+                logger.error(f"❌ [CRAWLER-RAW-RESULT] Raw result: {final_result}")
                 return self._create_error_result(url, f"JSON parsing failed: {str(parse_error)}")
             
             logger.info(f"✅ [CRAWLER-SUCCESS] Berhasil ekstrak data dari {url}")
