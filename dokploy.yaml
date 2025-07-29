@@ -56,11 +56,11 @@ services:
     networks:
       - app-network
     deploy:
-      replicas: 2
+      replicas: 1
       resources:
         limits:
-          memory: 1G
-          cpus: '1.0'
+          memory: 2G
+          cpus: '2.0'
     healthcheck:
       test: ["CMD", "celery", "-A", "src.worker", "inspect", "ping"]
       interval: 30s

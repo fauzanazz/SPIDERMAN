@@ -476,11 +476,47 @@ class Neo4jHandler:
             "EMI_SARPONIKA"
         ]
         
-        # 3 different gambling websites (each will have 3 pooling accounts)
+        # 3 different gambling websites with their actual accounts
         gambling_websites = [
-            {"url": "https://judolbola88.com", "name": "JudolBola88"},
-            {"url": "https://slotgacor99.net", "name": "SlotGacor99"},
-            {"url": "https://togelking777.id", "name": "TogelKing777"}
+            {
+                "url": "https://cina18.site/", 
+                "name": "Cina18",
+                "accounts": [
+                    {"type": "bank", "bank": "BRI", "number": "321901004503507", "owner": "CATUR CAHYANTO"},
+                    {"type": "ewallet", "wallet_type": "DANA", "number": "6825764937", "owner": "DANA_USER"},
+                    {"type": "qris", "merchant": "SHOP FAST SUPER", "number": "9360050300000909152", "owner": "QRIS_MERCHANT"},
+                    {"type": "bank", "bank": "BCA", "number": "6825764937", "owner": "DESI AMELIA MIRASANI"},
+                    {"type": "ewallet", "wallet_type": "OVO", "number": "087786545607", "owner": "JUARIAH"},
+                    {"type": "ewallet", "wallet_type": "LINKAJA", "number": "087738231911", "owner": "JOJOH"},
+                    {"type": "ewallet", "wallet_type": "GOPAY", "number": "087828634230", "owner": "GOPAY_USER"},
+                    {"type": "bank", "bank": "BNI", "number": "1922734890", "owner": "TRI ARIKA"},
+                    {"type": "bank", "bank": "MANDIRI", "number": "1670007466534", "owner": "AGUS MAULANA"}
+                ]
+            },
+            {
+                "url": "https://maxwin29.site/", 
+                "name": "Maxwin29",
+                "accounts": [
+                    {"type": "bank", "bank": "BRI", "number": "086301004513500", "owner": "RICKY YUNI YANTO"},
+                    {"type": "qris", "merchant": "PULSA HEBAT CONNECT", "number": "9360081802501100465", "owner": "QRIS_MERCHANT"},
+                    {"type": "bank", "bank": "BCA", "number": "7780215270", "owner": "VERI IRWAN"},
+                    {"type": "bank", "bank": "OCBC", "number": "693817576707", "owner": "MACHLIANA"},
+                    {"type": "bank", "bank": "BNI", "number": "1882415640", "owner": "EMI BADRIYAH"}
+                ]
+            },
+            {
+                "url": "https://kaiko30.xyz/", 
+                "name": "Kaiko30",
+                "accounts": [
+                    {"type": "bank", "bank": "BNI", "number": "1906343330", "owner": "RUT DAME YANTI SIMATUPANG"},
+                    {"type": "bank", "bank": "BCA", "number": "6872421579", "owner": "LAILA FIRDA SHANIA"},
+                    {"type": "bank", "bank": "BRI", "number": "038501013425536", "owner": "DIYAS UBAYDILLAH IMTYAS"},
+                    {"type": "bank", "bank": "MANDIRI", "number": "1060020389279", "owner": "RAFITA FATMALA SIFI HAKIM"},
+                    {"type": "ewallet", "wallet_type": "LINKAJA", "number": "087895620967", "owner": "LINKAJA_USER"},
+                    {"type": "ewallet", "wallet_type": "GOPAY", "number": "087844128060", "owner": "GOPAY_USER"},
+                    {"type": "qris", "merchant": "PRANA MAJU KARYA DYNAMIS", "number": "9360050300000909103", "owner": "QRIS_MERCHANT"}
+                ]
+            }
         ]
         
         try:
@@ -513,8 +549,8 @@ class Neo4jHandler:
                     })
                 
                 # New structure:
-                # 20 Player Accounts (not featured on any website, transfer to pooling accounts)
-                # 9 Pooling Accounts (3 per website, each website guaranteed to have 1 BCA)
+                # 20 Player Accounts (actual accounts from the websites, acting as players)
+                # 9 Pooling Accounts (3 per website hierarchy, each website guaranteed to have 1 BCA)
                 # 1 Layer-2 Account (receives from all pooling accounts, top-level aggregator)
                 
                 created_entities = []
@@ -524,82 +560,116 @@ class Neo4jHandler:
                 
                 entity_counter = 0
                 
-                # 1. Create 20 Player Accounts (not featured on any website)
-                logger.info("🎮 Creating 20 player accounts...")
-                bank_names = ["BCA", "BRI", "BNI", "Mandiri", "CIMB Niaga"]
+                # 1. Create Player Accounts from the actual website accounts
+                logger.info("🎮 Creating player accounts from website data...")
                 
-                for i in range(20):
-                    oss_key = demo_oss_keys[entity_counter % len(demo_oss_keys)]
-                    entity_counter += 1
-                    
-                    # Mix of bank accounts and e-wallets for players
-                    if i < 15:  # 15 bank accounts
-                        bank_name = random.choice(bank_names)
-                        account_number = f"{random.randint(1000000000, 9999999999)}"
+                for site_idx, site in enumerate(gambling_websites):
+                    for account_data in site["accounts"]:
+                        oss_key = demo_oss_keys[entity_counter % len(demo_oss_keys)]
+                        entity_counter += 1
                         
-                        account_query = """
-                        MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
-                        SET a.jenis_akun = 'CHECKING',
-                            a.nama_bank = $nama_bank,
-                            a.pemilik_rekening = $pemilik_rekening,
-                            a.terakhir_update = $waktu,
-                            a.priority_score = $priority_score,
-                            a.oss_key = $oss_key,
-                            a.cluster_id = 'players',
-                            a.connections = 1,
-                            a.is_test_data = true
-                        """
-                        
-                        session.run(account_query, {
-                            "nomor_rekening": account_number,
-                            "nama_bank": bank_name,
-                            "pemilik_rekening": f"Player {entity_counter}",
-                            "waktu": datetime.now().isoformat(),
-                            "priority_score": random.randint(20, 50),
-                            "oss_key": oss_key
-                        })
-                        
-                        player_account_ids.append(account_number)
-                        created_entities.append({
-                            "type": "AkunMencurigakan",
-                            "identifier": account_number,
-                            "cluster": "players"
-                        })
-                        
-                    else:  # 5 e-wallets
-                        ewallet_types = ["OVO", "DANA", "GoPay", "LinkAja", "ShopeePay"]
-                        wallet_type = random.choice(ewallet_types)
-                        wallet_id = f"{wallet_type}_{random.randint(100000, 999999)}"
-                        
-                        ewallet_query = """
-                        MERGE (e:EWallet {wallet_id: $wallet_id})
-                        SET e.wallet_type = $wallet_type,
-                            e.phone_number = $phone_number,
-                            e.owner_name = $owner_name,
-                            e.registration_date = $waktu,
-                            e.priority_score = $priority_score,
-                            e.oss_key = $oss_key,
-                            e.cluster_id = 'players',
-                            e.connections = 1,
-                            e.is_test_data = true
-                        """
-                        
-                        session.run(ewallet_query, {
-                            "wallet_id": wallet_id,
-                            "wallet_type": wallet_type,
-                            "phone_number": f"0812{random.randint(10000000, 99999999)}",
-                            "owner_name": f"Player {entity_counter}",
-                            "waktu": datetime.now().isoformat(),
-                            "priority_score": random.randint(15, 45),
-                            "oss_key": oss_key
-                        })
-                        
-                        player_account_ids.append(wallet_id)
-                        created_entities.append({
-                            "type": "EWallet",
-                            "identifier": wallet_id,
-                            "cluster": "players"
-                        })
+                        if account_data["type"] == "bank":
+                            # Create bank account
+                            account_query = """
+                            MERGE (a:AkunMencurigakan {nomor_rekening: $nomor_rekening})
+                            SET a.jenis_akun = 'CHECKING',
+                                a.nama_bank = $nama_bank,
+                                a.pemilik_rekening = $pemilik_rekening,
+                                a.terakhir_update = $waktu,
+                                a.priority_score = $priority_score,
+                                a.oss_key = $oss_key,
+                                a.cluster_id = 'players',
+                                a.connections = 1,
+                                a.source_website = $source_website,
+                                a.is_test_data = true
+                            """
+                            
+                            session.run(account_query, {
+                                "nomor_rekening": account_data["number"],
+                                "nama_bank": account_data["bank"],
+                                "pemilik_rekening": account_data["owner"],
+                                "waktu": datetime.now().isoformat(),
+                                "priority_score": random.randint(20, 50),
+                                "oss_key": oss_key,
+                                "source_website": site["url"]
+                            })
+                            
+                            player_account_ids.append(account_data["number"])
+                            created_entities.append({
+                                "type": "AkunMencurigakan",
+                                "identifier": account_data["number"],
+                                "cluster": "players",
+                                "source_website": site["url"]
+                            })
+                            
+                        elif account_data["type"] == "ewallet":
+                            # Create e-wallet account
+                            ewallet_query = """
+                            MERGE (e:EWallet {wallet_id: $wallet_id})
+                            SET e.wallet_type = $wallet_type,
+                                e.phone_number = $phone_number,
+                                e.owner_name = $owner_name,
+                                e.registration_date = $waktu,
+                                e.priority_score = $priority_score,
+                                e.oss_key = $oss_key,
+                                e.cluster_id = 'players',
+                                e.connections = 1,
+                                e.source_website = $source_website,
+                                e.is_test_data = true
+                            """
+                            
+                            session.run(ewallet_query, {
+                                "wallet_id": account_data["number"],
+                                "wallet_type": account_data["wallet_type"],
+                                "phone_number": account_data["number"],
+                                "owner_name": account_data["owner"],
+                                "waktu": datetime.now().isoformat(),
+                                "priority_score": random.randint(15, 45),
+                                "oss_key": oss_key,
+                                "source_website": site["url"]
+                            })
+                            
+                            player_account_ids.append(account_data["number"])
+                            created_entities.append({
+                                "type": "EWallet",
+                                "identifier": account_data["number"],
+                                "cluster": "players",
+                                "source_website": site["url"]
+                            })
+                            
+                        elif account_data["type"] == "qris":
+                            # Create QRIS account as EWallet
+                            qris_query = """
+                            MERGE (q:EWallet {wallet_id: $wallet_id})
+                            SET q.wallet_type = 'QRIS',
+                                q.merchant_name = $merchant_name,
+                                q.owner_name = $owner_name,
+                                q.registration_date = $waktu,
+                                q.priority_score = $priority_score,
+                                q.oss_key = $oss_key,
+                                q.cluster_id = 'players',
+                                q.connections = 1,
+                                q.source_website = $source_website,
+                                q.is_test_data = true
+                            """
+                            
+                            session.run(qris_query, {
+                                "wallet_id": account_data["number"],
+                                "merchant_name": account_data["merchant"],
+                                "owner_name": account_data["owner"],
+                                "waktu": datetime.now().isoformat(),
+                                "priority_score": random.randint(15, 45),
+                                "oss_key": oss_key,
+                                "source_website": site["url"]
+                            })
+                            
+                            player_account_ids.append(account_data["number"])
+                            created_entities.append({
+                                "type": "EWallet",
+                                "identifier": account_data["number"],
+                                "cluster": "players",
+                                "source_website": site["url"]
+                            })
                 
                 # 2. Create 9 Pooling Accounts (3 per website, each website guaranteed to have 1 BCA)
                 logger.info("🏦 Creating 9 pooling accounts (3 per website, each with at least 1 BCA)...")
@@ -847,6 +917,7 @@ class Neo4jHandler:
             import traceback
             logger.error(f"📍 Traceback: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
+    
     def clear_test_data(self):
         """
         Clear all test data from the database (keeps schema samples)
