@@ -5,8 +5,10 @@ from pathlib import Path
 import logging
 import boto3
 from botocore.exceptions import ClientError
-from dotenv import load_dotenv
 from botocore.config import Config
+
+from dotenv import load_dotenv
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +28,7 @@ class StorageManager:
         if self._contabu_initialized:
             return
 
-        project_root = Path(__file__).parent.parent
-        env_path = project_root / ".env"
-        if env_path.exists():
-            load_dotenv(env_path, override=True)
-            logger.info(f"Loaded environment variables from {env_path}")
-
+       
         self.endpoint_url = os.getenv("B2_BUCKET_URL")
         access_key = os.getenv("B2_ACCESS_KEY")
         secret_key = os.getenv("B2_SECRET_KEY")
