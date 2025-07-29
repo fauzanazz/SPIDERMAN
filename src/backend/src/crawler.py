@@ -155,26 +155,12 @@ class IndonesianAccountExtractor:
             
             task = f"Navigate to {url} and {task_context}{extraction_instruction}"
         
-            # Disable ad blocking to capture all content
-            browser_session = BrowserSession(
-                use_adblock=False,  # Allow all content including ads
-                viewport={"width": 1280, "height": 1100},
-                viewport_expansion=-1
-            )
-            controller = Controller(output_model=GamblingSiteData)
-            agent = Agent(
-                task=task,
-                llm=get_llm_config(),
-                headless=True,
-                controller=controller,
-                capture_screenshots=False,
-                browser_session=browser_session
-            )
+       
+            controller = Controller(output_model=GamblingSiteData) 
             
-
             @controller.action('Save a screenshot of the current page with the name of the account holder exist in this page')
-            async def save_screenshot(browser: BrowserContext):
-                page = await browser.get_current_page()
+            async def save_screenshot(browser_session: BrowserSession):
+                page = await browser_session.get_current_page()
                 screenshot = await page.screenshot(full_page=True, animations='disabled')
                 filename = f"./screenshots/screenshot_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
                 
@@ -187,6 +173,22 @@ class IndonesianAccountExtractor:
                     extracted_content=f'Saved a screenshot of the page to {filename}',
                     include_in_memory=True
                 )
+            
+            # Disable ad blocking to capture all content
+            browser_session = BrowserSession(
+                use_adblock=False,  # Allow all content including ads
+                viewport={"width": 1280, "height": 1100},
+                viewport_expansion=-1
+            )
+
+            agent = Agent(
+                task=task,
+                llm=get_llm_config(),
+                headless=True,
+                controller=controller,
+                capture_screenshots=False,
+                browser_session=browser_session
+            )
             
             logger.debug(f"🤖 [CRAWLER-AGENT] Menjalankan agent untuk: {url}")
             
