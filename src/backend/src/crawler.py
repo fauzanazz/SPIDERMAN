@@ -135,7 +135,7 @@ class IndonesianAccountExtractor:
             logger.info(f"🎯 [CRAWLER-PHASE-2] Generating multiple identities for comprehensive extraction")
             
             # Generate random Indonesian identities for multiple registration attempts
-            num_identities = min(len(discovered_payment_methods), 3) # Cap at 4 to avoid being too aggressive
+            num_identities = min(len(discovered_payment_methods), 2) # Cap at 4 to avoid being too aggressive
             identities = []
             for i in range(num_identities):
                 identity = generate_random_identity()
