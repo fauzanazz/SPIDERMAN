@@ -5,6 +5,7 @@ from typing import List
 from browser_use.llm import ChatGoogle, ChatOpenAI
 from dotenv import load_dotenv
 load_dotenv()
+import string
 
 # Browser-use configuration
 def get_llm_config():
@@ -32,10 +33,10 @@ llm_config = None
 def generate_random_identity():
     # Common Indonesian first names
     first_names = [
-    "Galih", "Intan", "Yudi", "Mega", "Joko", "Ayu", "Reza", "Nadia",
-    "Teguh", "Vina", "Imam", "Tari", "Hendra", "Nisa", "Agus", "Bella",
-    "Zaki", "Dina", "Ilham", "Citra", "Rian", "Sekar", "Fikri", "Laras"
-  ]
+        "Galih", "Intan", "Nadia", "Teguh", "Hendra", "Bella", "Ilham", "Citra",
+        "Sekar", "Fikri", "Laras", "Farhan", "Rosdiana", "Maulana", "Nurhaliza",
+        "Iskandar", "Herlambang", "Rahmadhani", "Febriyanti", "Pramudita", "Cahyani"
+    ]
 
     
     # Common Indonesian last names
@@ -60,8 +61,15 @@ def generate_random_identity():
     username = random.choice(username_patterns)
     
     # Generate password
-    password_base = random.choice(["password", "qwerty", "123456", first_name.lower(), "admin"])
-    password = f"{password_base}{random.randint(10, 9999)}"
+    # Generate a password with at least 8 characters, including both letters and numbers
+
+    password_length = random.randint(8, 12)
+    # Ensure at least one letter and one digit
+    letters = random.choices(string.ascii_letters, k=password_length - 2)
+    digits = random.choices(string.digits, k=2)
+    password_chars = letters + digits
+    random.shuffle(password_chars)
+    password = ''.join(password_chars)
     
     # Generate email
     email_domains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"]
@@ -86,7 +94,7 @@ def generate_random_identity():
     ]
     
     bank = random.choice(indonesian_banks)
-    account_number = ''.join([str(random.randint(0, 9)) for _ in range(random.randint(10, 16))])
+    account_number = ''.join([str(random.randint(0, 9)) for _ in range(10)])
     
     # Generate birth date (18-50 years old)
     birth_year = random.randint(1974, 2006)
