@@ -240,21 +240,23 @@ class IndonesianAccountExtractor:
             if screenshot_folder.exists():
                 existing_files = list(screenshot_folder.glob("*.png"))
                 for i, file in enumerate(existing_files):
-                    path = str(file)  # keeps relative path, e.g., "./screenshots/john_doe.png"
-
-                    oss_key = await storage.storage_manager.save_file(
-                        path,
-                        f"{gambling_data.bank_accounts[i].account_number}.png"
-                    )
-                    gambling_data.bank_accounts[i].oss_key = oss_key
-                    logger.info(f"📤 [CRAWLER-OSS-SAVE] Screenshot saved to OSS with key: {oss_key}")
-          
-
                     try:
-                        os.remove(file)
+                        path = str(file)  # keeps relative path, e.g., "./screenshots/john_doe.png"
+
+                        oss_key = await storage.storage_manager.save_file(
+                            path,
+                            f"{gambling_data.bank_accounts[i].account_number}.png"
+                        )
+                        gambling_data.bank_accounts[i].oss_key = oss_key
+                        logger.info(f"\U0001F4E4 [CRAWLER-OSS-SAVE] Screenshot saved to OSS with key: {oss_key}")
+
+                        try:
+                            os.remove(file)
+                        except Exception as e:
+                            logger.error(f"Failed to delete {file}: {e}")
                     except Exception as e:
-                        logger.error(f"Failed to delete {file}: {e}")
-            
+                        logger.error(f"Error processing screenshot or bank account at index {i}: {e}")
+                        continue
             return gambling_data
 
         except Exception as e:

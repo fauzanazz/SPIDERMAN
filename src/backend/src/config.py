@@ -163,7 +163,7 @@ STRATEGIES
 =================
 OUTPUT FORMAT
 =================
-Return a JSON-style list of all visible banks only (do not include e-wallets, cryptocurrency, or other payment channels). For example:
+Return a JSON-style list of all visible **real bank accounts only**. Do **not** include virtual accounts, e-wallets, cryptocurrency, or any other payment channels. Only include actual bank accounts (e.g., BCA, BRI, Mandiri, CIMB, BNI) that belong to real banks, not virtual or intermediary accounts. For example:
 {{
   "banks": [
     "BCA",
@@ -394,9 +394,9 @@ For ALL other popups (modals, banners, overlays):
 
 3. **Deposit Extraction Phase:**
    - Navigate to deposit section
-   - Extract ALL available deposit receiving accounts
+   - Extract ALL available deposit receiving **bank accounts only** (focus on real bank accounts, do **not** include virtual accounts or other payment channels)
    - Save a screenshot of the current page
-   - Record all financial data found
+   - Record all financial data found (bank account details only)
 
 4. **Logout Phase:**
    - **MANDATORY:** Logout completely from IDENTITY 1 account
