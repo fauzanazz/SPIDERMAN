@@ -24,6 +24,8 @@ services:
       - B2_ACCESS_KEY=${B2_ACCESS_KEY}
       - B2_SECRET_KEY=${B2_SECRET_KEY}
       - B2_BUCKET_NAME=${B2_BUCKET_NAME}
+      - CELERY_TASK_TIME_LIMIT=${CELERY_TASK_TIME_LIMIT}
+      - CELERY_TASK_SOFT_TIME_LIMIT=${CELERY_TASK_SOFT_TIME_LIMIT}
       
     depends_on:
       - db
@@ -54,6 +56,8 @@ services:
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - CELERY_TASK_TIME_LIMIT=${CELERY_TASK_TIME_LIMIT}
+      - CELERY_TASK_SOFT_TIME_LIMIT=${CELERY_TASK_SOFT_TIME_LIMIT}
     depends_on:
       - db
       - redis
