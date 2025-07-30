@@ -454,7 +454,7 @@ export function LeftSidebar({
                                           size="sm"
                                           onClick={() =>
                                             window.open(
-                                              `https://${site}`,
+                                              site,
                                               "_blank"
                                             )
                                           }
