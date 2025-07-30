@@ -29,10 +29,10 @@ class StorageManager:
             return
 
        
-        self.endpoint_url = os.getenv("B2_BUCKET_URL")
-        access_key = os.getenv("B2_ACCESS_KEY")
-        secret_key = os.getenv("B2_SECRET_KEY")
-        self.bucket_name = os.getenv("B2_BUCKET_NAME")
+        self.endpoint_url = os.environ.get("B2_BUCKET_URL")
+        access_key = os.environ.get("B2_ACCESS_KEY")
+        secret_key = os.environ.get("B2_SECRET_KEY")
+        self.bucket_name = os.environ.get("B2_BUCKET_NAME")
         
         self._contabu_initialized = True
 

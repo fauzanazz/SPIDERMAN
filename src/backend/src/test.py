@@ -72,10 +72,10 @@ async def save_images():
     
     # Debug: Check environment variables
     print("=== Environment Variables Debug ===")
-    print(f"B2_BUCKET_URL: {os.getenv('B2_BUCKET_URL')}")
-    print(f"B2_ACCESS_KEY: {os.getenv('B2_ACCESS_KEY')[:10]}..." if os.getenv('B2_ACCESS_KEY') else "B2_ACCESS_KEY: None")
-    print(f"B2_SECRET_KEY: {'*' * 10}..." if os.getenv('B2_SECRET_KEY') else "B2_SECRET_KEY: None")
-    print(f"B2_BUCKET_NAME: {os.getenv('B2_BUCKET_NAME')}")
+    print(f"B2_BUCKET_URL: {os.environ.get('B2_BUCKET_URL')}")
+    print(f"B2_ACCESS_KEY: {os.environ.get('B2_ACCESS_KEY')[:10]}..." if os.environ.get('B2_ACCESS_KEY') else "B2_ACCESS_KEY: None")
+    print(f"B2_SECRET_KEY: {'*' * 10}..." if os.environ.get('B2_SECRET_KEY') else "B2_SECRET_KEY: None")
+    print(f"B2_BUCKET_NAME: {os.environ.get('B2_BUCKET_NAME')}")
     print("=====================================")
     
     # Test bucket access first
@@ -93,55 +93,55 @@ async def save_images():
             return
     
     # Create a test image file if it doesn't exist
-    test_image_path = "./screenshots/EMI_SARPONIKA.png"
+    # test_image_path = "./screenshots/EMI_SARPONIKA.png"
     
-    if not os.path.exists(test_image_path):
-        print(f"Test image not found at {test_image_path}")
-        print("Available files in screenshots directory:")
-        screenshots_dir = "./screenshots"
-        if os.path.exists(screenshots_dir):
-            for file in os.listdir(screenshots_dir):
-                print(f"  - {file}")
-        return
+    # if not os.path.exists(test_image_path):
+    #     print(f"Test image not found at {test_image_path}")
+    #     print("Available files in screenshots directory:")
+    #     screenshots_dir = "./screenshots"
+    #     if os.path.exists(screenshots_dir):
+    #         for file in os.listdir(screenshots_dir):
+    #             print(f"  - {file}")
+    #     return
     
-    try:
-        print(f"Testing save_file with: {test_image_path}")
+    # try:
+    #     print(f"Testing save_file with: {test_image_path}")
         
-        # Test the save_file function
-        destination_path = "test_uploads/sample_screenshot.png"
-        result = await storage_manager.save_file(test_image_path, destination_path)
+        # # Test the save_file function
+    #     destination_path = "test_uploads/sample_screenshot.png"
+    #     result = await storage_manager.save_file("./screenshots/img.png", destination_path)
+
+    #     print(f"✓ File saved successfully!")
+    #     # print(f"  Source: {test_image_path}")
+    #     print(f"  Destination: {destination_path}")
+    #     print(f"  Returned OSS key: {result}")
         
-        print(f"✓ File saved successfully!")
-        print(f"  Source: {test_image_path}")
-        print(f"  Destination: {destination_path}")
-        print(f"  Returned OSS key: {result}")
-        
-        # Test generating a presigned URL
-        if result:
-            try:
-                presigned_url = storage_manager.generate_presigned_url(result)
-                print(f"✓ Presigned URL generated: {presigned_url}")
-            except Exception as e:
-                print(f"✗ Failed to generate presigned URL: {e}")
+    #     # Test generating a presigned URL
+    # # if result:
+    #     try:
+    #         presigned_url = storage_manager.generate_presigned_url("img.png")
+    #         print(f"✓ Presigned URL generated: {presigned_url}")
+    #     except Exception as e:
+            # print(f"✗ Failed to generate presigned URL: {e}")
         
         # Test generating a public URL
-        if result:
-            try:
-                public_url = storage_manager.get_public_url(result)
-                print(f"✓ Public URL generated: {public_url}")
-            except Exception as e:
-                print(f"✗ Failed to generate public URL: {e}")
+        # if result:
+        #     try:
+        #         public_url = storage_manager.get_public_url(result)
+        #         print(f"✓ Public URL generated: {public_url}")
+        #     except Exception as e:
+                # print(f"✗ Failed to generate public URL: {e}")
                 
-    except FileNotFoundError as e:
-        print(f"✗ File not found error: {e}")
-    except Exception as e:
-        print(f"✗ Upload failed: {e}")
-        print(f"Error type: {type(e).__name__}")
+    # except FileNotFoundError as e:
+    #     print(f"✗ File not found error: {e}")
+    # except Exception as e:
+    #     print(f"✗ Upload failed: {e}")
+    #     print(f"Error type: {type(e).__name__}")
 
 
 # Run the storage tests
 if __name__ == "__main__":
     print("=== Testing Storage Manager ===")
-    asyncio.run(main())
+    asyncio.run(save_images())
     
 
