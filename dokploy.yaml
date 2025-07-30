@@ -20,6 +20,11 @@ services:
       - PRODUCTION_DOMAIN=${PRODUCTION_DOMAIN}
       - SECRET_KEY=${SECRET_KEY}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - B2_BUCKET_URL=${B2_BUCKET_URL}
+      - B2_ACCESS_KEY=${B2_ACCESS_KEY}
+      - B2_SECRET_KEY=${B2_SECRET_KEY}
+      - B2_BUCKET_NAME=${B2_BUCKET_NAME}
+      
     depends_on:
       - db
       - redis
