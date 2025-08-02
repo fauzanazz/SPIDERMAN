@@ -48,7 +48,7 @@ from .schema import (
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-env = Environment(loader=FileSystemLoader("templates"))
+env = Environment(loader=FileSystemLoader("src/templates"))
 
 load_dotenv() 
 
@@ -466,7 +466,7 @@ async def generate_report(
 
     logger.info(f"Generating report for {nomor_rekening} with image {img_path}")
 
-    static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
     css_file = os.path.join(static_dir, "report.css")
     
     rendered_html = template.render(
@@ -505,7 +505,8 @@ async def generate_report(req: ReportRequest):
         img_path = storage_manager.generate_presigned_url(account.oss_key, expiration=3600)
         account.oss_key = img_path
    
-    static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+    
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
     css_file = os.path.join(static_dir, "report.css")
     
     rendered_html = template.render(
