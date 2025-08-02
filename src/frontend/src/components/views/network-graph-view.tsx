@@ -1102,15 +1102,13 @@ export function NetworkGraphView({
 
       {/* Graph Stats */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 space-y-4">
-        <Card className="p-3 bg-red-700/90 border-white border-dotted backdrop-blur">
+        <Card className="p-3 bg-red-700/90 border-white border-dotted backdrop-blur max-w-96">
           <div className="text-sm space-y-1 text-center">
             <div className="flex justify-center gap-6">
-                 Setiap akun dengan nama pemilik yang tercantum merupakan hasil crawling langsung
+                 Setiap akun dengan nama pemilik yang tercantum adalah data asli hasil crawling situs judi, dan dapat diverifikasi melalui URL sumber pada detail node.
             </div>
-                       <div className="flex justify-center gap-6">
-
-              dari situs judi, dan dapat diverifikasi melalui URL sumber pada detail node.
-            </div>
+             <div className="flex justify-center gap-6">
+*data transaksi adalah hasil mocking            </div>
           </div>
         </Card>
         <Card className="p-3 bg-black/90 border-gray-700 backdrop-blur">
